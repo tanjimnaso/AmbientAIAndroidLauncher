@@ -1,18 +1,32 @@
 # Best Practices
 
-## 1. Battery Optimization
-- **True Black (#000000):** Use pure black in dark mode to turn off OLED pixels.
-- **No Live Blurs:** Android's `RenderEffect` for live blur drains the battery. Use pre-rendered, static blurred PNGs for the background.
-- **Lazy Loading AI:** Only instantiate Fireworks API calls/connections when the user interacts with the chat. Limit background polling.
+## 1. Build And Tooling
+- Always use the committed Gradle wrapper.
+- Keep AGP, wrapper, and Compose/Kotlin tooling aligned before doing feature work.
+- Do not rely on ad hoc machine-level Gradle versions.
 
-## 2. Compose Performance
-- **Derived States:** When filtering the installed apps list in the App Drawer, use `derivedStateOf` to prevent unnecessary UI recompositions.
-- **Edge-to-Edge:** Use standard WindowInsets modifiers (`Modifier.imePadding()`, etc.) carefully to place elements above the keyboard without breaking the immersive view.
+## 2. Wallpaper And System Integration
+- Prefer `windowShowWallpaper` and transparent launcher surfaces over direct wallpaper bitmap access.
+- Avoid private Samsung effects and private system hooks.
+- Keep One UI as the wallpaper owner; the launcher should adapt, not replace that stack.
 
-## 3. System Integration
-- **Knox-Safe Modifications:** Do not attempt to root or delete the default One UI launcher. Instead, restrict its battery usage in settings or freeze it via ADB (`adb shell pm disable-user --user 0 com.sec.android.app.launcher`) once the custom launcher is fully stable.
-- **Recents/Multitasking:** Disabling One UI Home completely might break standard Samsung recent apps/gestures. Keep it "Restricted" in battery settings as a safer alternative.
+## 3. Home System Discipline
+- Treat the home screen as a section system, not a one-off dashboard.
+- Each app should belong to one launcher bucket at most.
+- Hide Samsung/system clutter through the hidden bucket instead of polluting the main home.
+- Keep the left industrial page for navigation, hidden/system access, and settings.
 
-## 4. Typography Strictness
-- Never hardcode font sizes or weights in individual Composables.
-- Always pull from the designated Typography object (e.g., `MaterialTheme.typography.bodyLarge`) to ensure global consistency and avoid visual white noise.
+## 4. Compose Performance
+- Use `derivedStateOf` for filtered app lists and bucket projections.
+- Keep large surfaces simple; do not introduce live blur or heavy shader effects.
+- Prefer reusable card primitives over repeatedly inlining complex UI blocks.
+
+## 5. Visual Consistency
+- Large rounded cards on home.
+- Thin borders and regular-weight text for the industrial/navigation layer.
+- Pull font styles from the shared typography object only.
+- Do not reintroduce a generic bottom app bar unless it is clearly justified by the interaction model.
+
+## 6. Deferred Integrations
+- Messaging/email recents should be built later as dedicated surfaces, not hacked into the current app grouping layer.
+- Widget hosting, notes editing, and feed/API integrations should sit on top of the current section model, not bypass it.

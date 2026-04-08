@@ -1,27 +1,75 @@
 # Architecture
 
 ## Technology Stack
-- **UI Framework:** Jetpack Compose + Material 3.
-- **Language:** Kotlin.
-- **Local Storage:** Room Database (for offline Notes).
-- **Network/API:** Retrofit / OkHttp (for RSS fetching and Fireworks API integration).
-- **Dependency Injection:** Hilt (recommended) or manual DI.
+- **Language:** Kotlin
+- **UI:** Jetpack Compose + Material 3 primitives
+- **Build:** Android Gradle Plugin `9.1.0`, Gradle wrapper `9.3.1`
+- **Android target:** `compileSdk 36`, `targetSdk 36`
+- **Persistence today:** `SharedPreferences` for launcher section configuration
+- **Persistence planned:** `Room` for notes/feed/cache layers
+- **Network planned:** Retrofit / OkHttp for real RSS and AI integrations
 
-## High-Level Components
-1. **MainActivity:**
-   - Sets `WindowCompat.setDecorFitsSystemWindows(window, false)` for edge-to-edge.
-   - Hosts the single Compose navigation graph or main state holder.
-2. **State Management (ViewModels):**
-   - `LauncherViewModel`: Manages the list of installed packages (`PackageManager`) and the search filter logic (`StateFlow`).
-   - `DashboardViewModel`: Manages RSS feed polling and local Room DB Notes.
-   - `AgenticAIViewModel`: Manages the chat session history and streaming responses from the Fireworks API.
-3. **Theme Engine:**
-   - A custom Compose Theme that observes the current system time to provide shifting Color Palettes (e.g., Ocean vs OLED Black).
-4. **Backend/AI Integration:**
-   - Connects to the Agentic AI system API (Fireworks).
-   - Prioritizes web technologies, specifically relying on a Chrome PWA setup for app handling.
+## Current App Structure
+1. **Activity Shell**
+   - `MainActivity` is intentionally thin.
+   - It owns the top-level `DashboardViewModel` and `AgenticAIViewModel`.
+   - It hands control to the launcher UI package.
 
-## Data Flow
-- App queries use standard Android `PackageManager` APIs, cached in memory.
-- Fireworks API queries are executed asynchronously; responses update the Compose UI seamlessly.
-- RSS feeds are parsed locally after fetching via network client.
+2. **Home Package**
+   - `home/LauncherScreen.kt`
+     - Orchestrates pager navigation, vertical home scrolling, and library overlay state.
+   - `home/LauncherCards.kt`
+     - Reusable card surfaces and home section rendering.
+   - `home/AppDrawer.kt`
+     - Full-screen library/editor overlay.
+   - `home/LauncherConfig.kt`
+     - Bucket model, assignment persistence, and default seeding heuristics.
+   - `home/LauncherLayout.kt`
+     - Shared spacing, sizing, and edge-bleed layout logic.
+
+3. **Theme Layer**
+   - `ui/theme/Theme.kt`
+     - Four ambient modes: `EARLY_MORNING`, `DAY`, `BLUE_HOUR`, `LATE_NIGHT`
+   - `ui/theme/Type.kt`
+     - `DM Serif Display` for large headings
+     - `Inter` for body, labels, and control text
+
+4. **Mock Data Layers**
+   - `DashboardViewModel`
+     - Mock feed items only
+   - `AgenticAIViewModel`
+     - Mock AI replies only
+
+## UI Flow
+1. **Page 0**
+   - Industrial text-led index page
+   - Section jumps
+   - Hidden/system entry
+   - Settings entry
+
+2. **Page 1**
+   - Scrollable ambient home
+   - AI card
+   - bucket rails and grouped cards
+   - composer
+
+3. **Overlay**
+   - Library `Launch` mode for app launching
+   - Library `Edit` mode for bucket assignment and hiding apps
+
+## State Model
+- Installed apps are queried from `PackageManager`.
+- Launcher config is stored as bucket-to-package assignments.
+- Each app belongs to at most one bucket.
+- `Hidden` is treated as a normal bucket for persistence, but it is excluded from home.
+
+## Wallpaper Strategy
+- The launcher no longer tries to read and scale the wallpaper bitmap directly.
+- The activity theme uses `windowShowWallpaper=true`.
+- Compose draws transparent content and ambient scrims over the real system wallpaper.
+
+## Planned Next Layers
+- Replace `SharedPreferences` launcher config with `DataStore`.
+- Add real widget hosting for selected sections.
+- Add real repositories for feed, notes, and AI.
+- Split social/message summaries into dedicated section models later.

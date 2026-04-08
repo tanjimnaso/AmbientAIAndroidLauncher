@@ -2,11 +2,19 @@ package com.ambient.launcher.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val OceanLight = Color(0xFFE0F7FA)
-val OceanDark = Color(0xFF006064)
-val OceanAccent = Color(0xFF00BCD4)
+val OceanMist = Color(0xFFEAF3F7)
+val OceanSlate = Color(0xFF46616F)
+val OceanTeal = Color(0xFF1B728E)
 
-val OledBlack = Color(0xFF000000)
-val CyberLime = Color(0xFFCDDC39)
-val CyberBlue = Color(0xFF00E5FF)
-val OledGray = Color(0xFF121212)
+val DawnInk = Color(0xFF132630)
+val DawnSurface = Color(0xFF1B3440)
+
+val BlueHourInk = Color(0xFF0A1B2C)
+val BlueHourSurface = Color(0xFF11293D)
+
+val MidnightOcean = Color(0xFF081723)
+val MidnightSurface = Color(0xFF0F2333)
+
+val ElectricCyan = Color(0xFF70F0FF)
+val IcyWhite = Color(0xFFF6FBFF)
+val SeaMist = Color(0xFFABC2D2)
