@@ -16,34 +16,39 @@ val InterFontFamily = FontFamily(
     Font(R.font.inter_semibold, weight = FontWeight.Bold)
 )
 
+val SyneFontFamily = FontFamily(
+    Font(R.font.syne_light, weight = FontWeight.Light),
+    Font(R.font.syne_regular, weight = FontWeight.Normal)
+)
+
 val DmSerifDisplayFamily = FontFamily(
     Font(R.font.dm_serif_display_regular, weight = FontWeight.Normal)
 )
 
 val Typography = Typography(
     displayLarge = TextStyle(
-        fontFamily = DmSerifDisplayFamily,
-        fontWeight = FontWeight.Normal,
-        fontSize = 86.sp,
-        lineHeight = 82.sp,
-        letterSpacing = (-2.2).sp
+        fontFamily = SyneFontFamily,
+        fontWeight = FontWeight.Light,
+        fontSize = 48.sp,
+        lineHeight = 52.sp,
+        letterSpacing = (-1.5).sp
     ),
     headlineLarge = TextStyle(
-        fontFamily = DmSerifDisplayFamily,
+        fontFamily = SyneFontFamily,
         fontWeight = FontWeight.Normal,
-        fontSize = 40.sp,
-        lineHeight = 40.sp,
-        letterSpacing = (-0.8).sp
+        fontSize = 32.sp,
+        lineHeight = 36.sp,
+        letterSpacing = (-0.5).sp
     ),
     headlineMedium = TextStyle(
-        fontFamily = DmSerifDisplayFamily,
+        fontFamily = SyneFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 32.sp,
         lineHeight = 34.sp,
         letterSpacing = (-0.5).sp
     ),
     titleLarge = TextStyle(
-        fontFamily = DmSerifDisplayFamily,
+        fontFamily = SyneFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 24.sp,
         lineHeight = 28.sp,

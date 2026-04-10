@@ -1,5 +1,7 @@
 package com.ambient.launcher
 
+import android.content.pm.ActivityInfo
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,12 +14,18 @@ import com.ambient.launcher.home.LauncherScreen
 import com.ambient.launcher.ui.theme.AmbientLauncherTheme
 
 class MainActivity : ComponentActivity() {
-    private val dashboardViewModel by viewModels<DashboardViewModel>()
-    private val agenticAIViewModel by viewModels<AgenticAIViewModel>()
+    private val dashboardViewModel: DashboardViewModel by viewModels()
+    private val agenticAIViewModel: AgenticAIViewModel by viewModels()
+    private val mediaViewModel: MediaViewModel by viewModels()
+    private val readingViewModel: ReadingViewModel by viewModels()
+    private val briefingViewModel: BriefingViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+        
+        ReadingServiceBus.setListener { readingViewModel.updateReadingState(it) }
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             window.attributes.layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -29,7 +37,10 @@ class MainActivity : ComponentActivity() {
                 ) {
                     LauncherScreen(
                         dashboardViewModel = dashboardViewModel,
-                        agenticAIViewModel = agenticAIViewModel
+                        agenticAIViewModel = agenticAIViewModel,
+                        mediaViewModel = mediaViewModel,
+                        readingViewModel = readingViewModel,
+                        briefingViewModel = briefingViewModel
                     )
                 }
             }

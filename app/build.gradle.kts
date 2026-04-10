@@ -1,7 +1,18 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use { stream -> load(stream) }
+    }
+}
+
+fun String.escapeForBuildConfig(): String = replace("\\", "\\\\").replace("\"", "\\\"")
 
 android {
     namespace = "com.ambient.launcher"
@@ -18,6 +29,16 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+        buildConfigField(
+            "String",
+            "GEMINI_API_KEY",
+            "\"${localProperties.getProperty("geminiApiKey", "").escapeForBuildConfig()}\""
+        )
+        buildConfigField(
+            "String",
+            "GEMINI_MODEL",
+            "\"${localProperties.getProperty("geminiModel", "gemini-2.5-flash").escapeForBuildConfig()}\""
+        )
     }
 
     buildTypes {
@@ -35,6 +56,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     packaging {
         resources {

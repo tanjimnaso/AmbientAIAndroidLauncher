@@ -261,6 +261,16 @@ fun LauncherScreen(
                 )
         )
 
+        // Todo panel overlay
+        if (isTodoOpen) {
+            TodoPanel(
+                isOpen = isTodoOpen,
+                onDismiss = { isTodoOpen = false }
+            )
+                    )
+                )
+        )
+
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
@@ -640,7 +650,13 @@ private fun HomePage(
             )
         }
 
-        item { Spacer(modifier = Modifier.height(48.dp)) }
+        item { Spacer(modifier = Modifier.height(32.dp)) }
+
+        item {
+            TimeHorizonDashboard()
+        }
+
+        item { Spacer(modifier = Modifier.height(40.dp)) }
 
         item {
             TodayInfoCard(

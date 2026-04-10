@@ -37,7 +37,18 @@ data class AmbientPalette(
     val chipBackground: Color,
     val closeButtonContainer: Color,
     val accentHalo: Color,
-    val accentHigh: Color
+    val accentHigh: Color,
+    
+    // Core UI
+    val textPrimary: Color,
+    val textSecondary: Color,
+    val tileBackground: Color,
+    
+    // Project Cards
+    val cardToday: Color,
+    val cardFocus: Color,
+    val cardReading: Color,
+    val cardWallet: Color
 )
 
 private data class AmbientThemeTokens(
@@ -47,111 +58,150 @@ private data class AmbientThemeTokens(
     val palette: AmbientPalette
 )
 
-private val EarlyMorningColorScheme = darkColorScheme(
-    primary = Color(0xFF7DDAE8),
-    secondary = IcyWhite,
-    tertiary = Color(0xFFBDF4FF),
-    background = DawnInk,
-    surface = DawnSurface,
-    onBackground = Color(0xFFF3FAFF),
-    onSurface = Color(0xFFF3FAFF),
-    onSurfaceVariant = Color(0xFFA8C0CF)
-)
+// Earthy, Muted Palettes
+private val EarthySurface = Color(0xFF1C1B1A)
+private val EarthyInk = Color(0xFF141312)
+private val MutedClay = Color(0xFF3D3A36)
+private val MutedSage = Color(0xFF4A4D45)
+private val MutedOchre = Color(0xFF6B6458)
+private val MutedText = Color(0xFFD6D3CD)
+private val MutedAccent = Color(0xFFB8A690)
 
-private val DayColorScheme = lightColorScheme(
-    primary = OceanTeal,
-    secondary = IcyWhite,
-    tertiary = Color(0xFF38CBE8),
-    background = OceanMist,
-    surface = Color(0xFFF8FBFD),
-    onBackground = Color(0xFF13222D),
-    onSurface = Color(0xFF13222D),
-    onSurfaceVariant = OceanSlate
+private val EarlyMorningColorScheme = darkColorScheme(
+    primary = Color(0xFFD4A574), // Warm rose-gold
+    secondary = Color(0xFFE8E5DC),
+    tertiary = Color(0xFFC89B6F),
+    background = EarthyInk,
+    surface = EarthySurface,
+    onBackground = Color(0xFFE8E5DC),
+    onSurface = Color(0xFFE8E5DC)
 )
 
 private val BlueHourColorScheme = darkColorScheme(
-    primary = ElectricCyan,
-    secondary = IcyWhite,
-    tertiary = Color(0xFFC9FBFF),
-    background = BlueHourInk,
-    surface = BlueHourSurface,
-    onBackground = Color(0xFFF4FAFF),
-    onSurface = Color(0xFFF4FAFF),
-    onSurfaceVariant = Color(0xFFB3C9D8)
+    primary = Color(0xFFE8A860), // Golden-tan
+    secondary = Color(0xFFE8E5DC),
+    tertiary = Color(0xFFF0B060),
+    background = EarthyInk,
+    surface = EarthySurface,
+    onBackground = Color(0xFFE8E5DC),
+    onSurface = Color(0xFFE8E5DC)
 )
 
 private val LateNightColorScheme = darkColorScheme(
-    primary = Color(0xFF82F6FF),
-    secondary = IcyWhite,
-    tertiary = Color(0xFFDDF8FF),
-    background = MidnightOcean,
-    surface = MidnightSurface,
-    onBackground = IcyWhite,
-    onSurface = IcyWhite,
-    onSurfaceVariant = Color(0xFFB7CDDC)
+    primary = Color(0xFF9DB5C9), // Cool steel-blue
+    secondary = Color(0xFFE0E3E8),
+    tertiary = Color(0xFFA8BFD9),
+    background = Color(0xFF0F1218),
+    surface = Color(0xFF1B1F27),
+    onBackground = Color(0xFFE0E3E8),
+    onSurface = Color(0xFFE0E3E8)
 )
 
-private val EarlyMorningPalette = AmbientPalette(
-    wallpaperScrimTop = Color(0x44142A36),
-    wallpaperScrimMid = Color(0x7A10222E),
-    wallpaperScrimBottom = Color(0xB8162731),
-    wallpaperGlow = Color(0x242EACFF),
-    panel = Color(0x7A18313E),
-    elevatedPanel = Color(0x8F203A47),
-    searchPanel = Color(0xA1142631),
-    drawerBackground = Color(0xE913212B),
-    chipBackground = Color(0x2637CBE8),
-    closeButtonContainer = Color(0x332D4756),
-    accentHalo = Color(0x2446D9F3),
-    accentHigh = Color(0xFFBDF4FF)
+private val DayColorScheme = lightColorScheme(
+    primary = MutedOchre,
+    secondary = MutedClay,
+    tertiary = MutedSage,
+    background = Color(0xFFF5F4F0),
+    surface = Color(0xFFEBEAE5),
+    onBackground = Color(0xFF2C2A28),
+    onSurface = Color(0xFF2C2A28)
 )
+
+// ── Early Morning Palette (5:00–7:30): Warm dawn awakening ──
+private val EarlyMorningPalette = AmbientPalette(
+    wallpaperScrimTop = Color(0x66141312),
+    wallpaperScrimMid = Color(0x99141312),
+    wallpaperScrimBottom = Color(0xCC141312),
+    wallpaperGlow = Color(0x10D4A574),
+    panel = Color(0xFF3A3430),
+    elevatedPanel = Color(0xFF4A4540),
+    searchPanel = Color(0xFF252320),
+    drawerBackground = EarthyInk,
+    chipBackground = Color(0xFF4A4740),
+    closeButtonContainer = Color(0xFF3D3A36),
+    accentHalo = Color(0x15D4A574),
+    accentHigh = Color(0xFFD4A574), // Warm rose-gold
+    textPrimary = Color(0xFFE8E5DC),
+    textSecondary = Color(0xFFB8B5AC),
+    tileBackground = Color(0xFF3D3A36),
+    cardToday = Color(0xFF2E2A27),
+    cardFocus = Color(0xFF37342F),
+    cardReading = Color(0xFF2E2A27),
+    cardWallet = Color(0xFF282D22)
+)
+
+// ── Blue Hour Palette (17:30–20:00): Golden hour glow ──
+private val BlueHourPalette = AmbientPalette(
+    wallpaperScrimTop = Color(0x66141312),
+    wallpaperScrimMid = Color(0x99141312),
+    wallpaperScrimBottom = Color(0xCC141312),
+    wallpaperGlow = Color(0x12E8A860),
+    panel = Color(0xFF3D3731),
+    elevatedPanel = Color(0xFF4A4440),
+    searchPanel = Color(0xFF252320),
+    drawerBackground = EarthyInk,
+    chipBackground = Color(0xFF4B4540),
+    closeButtonContainer = Color(0xFF3D3731),
+    accentHalo = Color(0x18E8A860),
+    accentHigh = Color(0xFFE8A860), // Golden-tan, saturated
+    textPrimary = Color(0xFFE8E5DC),
+    textSecondary = Color(0xFFB8B5AC),
+    tileBackground = Color(0xFF3D3A36),
+    cardToday = Color(0xFF322D2A),
+    cardFocus = Color(0xFF3B3632),
+    cardReading = Color(0xFF322D2A),
+    cardWallet = Color(0xFF2C3123)
+)
+
+// ── Late Night Palette (20:00–5:00): Cool, readable night ──
+private val LateNightPalette = AmbientPalette(
+    wallpaperScrimTop = Color(0x66070605),
+    wallpaperScrimMid = Color(0x99070605),
+    wallpaperScrimBottom = Color(0xCC070605),
+    wallpaperGlow = Color(0x0A9DB5C9),
+    panel = Color(0xFF35383E),
+    elevatedPanel = Color(0xFF42454B),
+    searchPanel = Color(0xFF1F2228),
+    drawerBackground = Color(0xFF0F1218),
+    chipBackground = Color(0xFF424850),
+    closeButtonContainer = Color(0xFF35383E),
+    accentHalo = Color(0x149DB5C9),
+    accentHigh = Color(0xFF9DB5C9), // Cool steel-blue, readable
+    textPrimary = Color(0xFFE0E3E8),
+    textSecondary = Color(0xFFB0B8C4),
+    tileBackground = Color(0xFF35383E),
+    cardToday = Color(0xFF272B32),
+    cardFocus = Color(0xFF30343B),
+    cardReading = Color(0xFF272B32),
+    cardWallet = Color(0xFF24282F)
+)
+
+// Legacy earthy palette (fallback)
+private val EarthyPalette = EarlyMorningPalette
 
 private val DayPalette = AmbientPalette(
-    wallpaperScrimTop = Color(0x1CE6F3F9),
-    wallpaperScrimMid = Color(0x52D6E7F0),
-    wallpaperScrimBottom = Color(0x99BFD5E0),
-    wallpaperGlow = Color(0x1434BDEB),
-    panel = Color(0xB8F5FAFD),
-    elevatedPanel = Color(0xDDFBFEFF),
-    searchPanel = Color(0xD7EFF6FA),
-    drawerBackground = Color(0xEEF2F8FB),
-    chipBackground = Color(0x1F1B728E),
-    closeButtonContainer = Color(0x120E2530),
-    accentHalo = Color(0x1A25CBEA),
-    accentHigh = Color(0xFF1F8EAF)
+    wallpaperScrimTop = Color(0x10EBEAE5),
+    wallpaperScrimMid = Color(0x30EBEAE5),
+    wallpaperScrimBottom = Color(0x60EBEAE5),
+    wallpaperGlow = Color(0x10B8A690),
+    panel = Color(0xFFDFDED9),
+    elevatedPanel = Color(0xFFD4D3CE),
+    searchPanel = Color(0xFFEBEAE5),
+    drawerBackground = Color(0xFFF5F4F0),
+    chipBackground = Color(0xFFD6D3CD),
+    closeButtonContainer = Color(0xFFD6D3CD),
+    accentHalo = Color(0x206B6458),
+    accentHigh = MutedOchre,
+    textPrimary = Color(0xFF2C2A28),
+    textSecondary = Color(0xFF7A756E),
+    tileBackground = Color(0xFFE1E0DB),
+    cardToday = Color(0xFFE6E5E0),
+    cardFocus = Color(0xFFE0DFDA),
+    cardReading = Color(0xFFE6E5E0),
+    cardWallet = Color(0xFFDDE0D9)
 )
 
-private val BlueHourPalette = AmbientPalette(
-    wallpaperScrimTop = Color(0x2A071320),
-    wallpaperScrimMid = Color(0x70102437),
-    wallpaperScrimBottom = Color(0xBC081623),
-    wallpaperGlow = Color(0x2F2DAFFF),
-    panel = Color(0x73101F31),
-    elevatedPanel = Color(0x8A13283B),
-    searchPanel = Color(0x99111F2E),
-    drawerBackground = Color(0xF1091623),
-    chipBackground = Color(0x222DE8FF),
-    closeButtonContainer = Color(0x2E173146),
-    accentHalo = Color(0x2670F0FF),
-    accentHigh = ElectricCyan
-)
-
-private val LateNightPalette = AmbientPalette(
-    wallpaperScrimTop = Color(0x3806121D),
-    wallpaperScrimMid = Color(0x7C081726),
-    wallpaperScrimBottom = Color(0xC20A1520),
-    wallpaperGlow = Color(0x3040C8FF),
-    panel = Color(0x7F0F2232),
-    elevatedPanel = Color(0x96132739),
-    searchPanel = Color(0xA5101E2C),
-    drawerBackground = Color(0xF2081622),
-    chipBackground = Color(0x2448DCFF),
-    closeButtonContainer = Color(0x33172D40),
-    accentHalo = Color(0x2D76F4FF),
-    accentHigh = Color(0xFF89F8FF)
-)
-
-private val LocalAmbientPalette = staticCompositionLocalOf { LateNightPalette }
+private val LocalAmbientPalette = staticCompositionLocalOf { EarthyPalette }
 private val LocalAmbientMode = staticCompositionLocalOf { AmbientMode.LATE_NIGHT }
 
 object AmbientTheme {
@@ -201,45 +251,20 @@ fun AmbientLauncherTheme(
 
 @Composable
 private fun rememberAmbientMode(): AmbientMode {
-    val time by produceState(initialValue = LocalTime.now()) {
+    return produceState(initialValue = resolveAmbientMode(LocalTime.now())) {
         while (true) {
-            value = LocalTime.now()
+            value = resolveAmbientMode(LocalTime.now())
             delay(60_000)
         }
-    }
-
-    return resolveAmbientMode(time)
+    }.value
 }
 
 private fun ambientThemeTokensFor(mode: AmbientMode): AmbientThemeTokens {
     return when (mode) {
-        AmbientMode.EARLY_MORNING -> AmbientThemeTokens(
-            mode = mode,
-            isDark = true,
-            colorScheme = EarlyMorningColorScheme,
-            palette = EarlyMorningPalette
-        )
-
-        AmbientMode.DAY -> AmbientThemeTokens(
-            mode = mode,
-            isDark = false,
-            colorScheme = DayColorScheme,
-            palette = DayPalette
-        )
-
-        AmbientMode.BLUE_HOUR -> AmbientThemeTokens(
-            mode = mode,
-            isDark = true,
-            colorScheme = BlueHourColorScheme,
-            palette = BlueHourPalette
-        )
-
-        AmbientMode.LATE_NIGHT -> AmbientThemeTokens(
-            mode = mode,
-            isDark = true,
-            colorScheme = LateNightColorScheme,
-            palette = LateNightPalette
-        )
+        AmbientMode.EARLY_MORNING -> AmbientThemeTokens(mode, true, EarlyMorningColorScheme, EarlyMorningPalette)
+        AmbientMode.DAY -> AmbientThemeTokens(mode, false, DayColorScheme, DayPalette)
+        AmbientMode.BLUE_HOUR -> AmbientThemeTokens(mode, true, BlueHourColorScheme, BlueHourPalette)
+        AmbientMode.LATE_NIGHT -> AmbientThemeTokens(mode, true, LateNightColorScheme, LateNightPalette)
     }
 }
 

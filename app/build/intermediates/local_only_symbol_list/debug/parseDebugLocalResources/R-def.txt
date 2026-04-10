@@ -1,0 +1,18 @@
+R_DEF: Internal format may change without notice
+local
+drawable ic_launcher_background
+drawable ic_launcher_foreground
+drawable wallpaper_ocean_night
+font dm_serif_display_regular
+font inter_medium
+font inter_regular
+font inter_semibold
+font inter_thin
+font syne_light
+font syne_regular
+mipmap ic_launcher
+mipmap ic_launcher_round
+string app_name
+style Theme.AmbientAIAndroidLauncher
+xml backup_rules
+xml data_extraction_rules

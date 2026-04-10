@@ -1,0 +1,219 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.ambient.launcher"
+4    android:versionCode="1"
+5    android:versionName="1.0" >
+6
+7    <uses-sdk
+7-->INJECTED
+8        android:minSdkVersion="26"
+8-->INJECTED
+9        android:targetSdkVersion="36" />
+9-->INJECTED
+10
+11    <!-- Permission to query all installed apps to build the launcher app drawer -->
+12    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+12-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:6:5-7:53
+12-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:6:22-74
+13
+14    <!-- Internet permission for AI API and RSS fetching -->
+15    <uses-permission android:name="android.permission.INTERNET" />
+15-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:10:5-67
+15-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:10:22-64
+16    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+16-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:11:5-81
+16-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:11:22-78
+17
+18    <permission
+18-->[androidx.core:core:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/919755bcf6cd7e74d719b438678c758f/transformed/core-1.18.0/AndroidManifest.xml:22:5-24:47
+19        android:name="com.ambient.launcher.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+19-->[androidx.core:core:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/919755bcf6cd7e74d719b438678c758f/transformed/core-1.18.0/AndroidManifest.xml:23:9-81
+20        android:protectionLevel="signature" />
+20-->[androidx.core:core:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/919755bcf6cd7e74d719b438678c758f/transformed/core-1.18.0/AndroidManifest.xml:24:9-44
+21
+22    <uses-permission android:name="com.ambient.launcher.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+22-->[androidx.core:core:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/919755bcf6cd7e74d719b438678c758f/transformed/core-1.18.0/AndroidManifest.xml:26:5-97
+22-->[androidx.core:core:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/919755bcf6cd7e74d719b438678c758f/transformed/core-1.18.0/AndroidManifest.xml:26:22-94
+23
+24    <application
+24-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:13:5-50:19
+25        android:allowBackup="true"
+25-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:14:9-35
+26        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+26-->[androidx.core:core:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/919755bcf6cd7e74d719b438678c758f/transformed/core-1.18.0/AndroidManifest.xml:28:18-86
+27        android:dataExtractionRules="@xml/data_extraction_rules"
+27-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:15:9-65
+28        android:debuggable="true"
+29        android:extractNativeLibs="false"
+29-->INJECTED
+30        android:fullBackupContent="@xml/backup_rules"
+30-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:16:9-54
+31        android:icon="@mipmap/ic_launcher"
+31-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:17:9-43
+32        android:label="@string/app_name"
+32-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:18:9-41
+33        android:roundIcon="@mipmap/ic_launcher_round"
+33-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:19:9-54
+34        android:supportsRtl="true"
+34-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:20:9-35
+35        android:testOnly="true"
+36        android:theme="@style/Theme.AmbientAIAndroidLauncher" >
+36-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:21:9-62
+37
+38        <!-- The MainActivity must be declared as a HOME launcher -->
+39        <activity
+39-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:25:9-40:20
+40            android:name="com.ambient.launcher.MainActivity"
+40-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:26:13-41
+41            android:clearTaskOnLaunch="true"
+41-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:29:13-45
+42            android:exported="true"
+42-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:27:13-36
+43            android:launchMode="singleTask"
+43-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:28:13-44
+44            android:stateNotNeeded="true"
+44-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:30:13-42
+45            android:theme="@style/Theme.AmbientAIAndroidLauncher" >
+45-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:31:13-66
+46            <intent-filter>
+46-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:32:13-39:29
+47                <action android:name="android.intent.action.MAIN" />
+47-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:33:17-69
+47-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:33:25-66
+48
+49                <!-- Make this app show up as a Home screen choice -->
+50                <category android:name="android.intent.category.HOME" />
+50-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:36:17-73
+50-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:36:27-70
+51                <category android:name="android.intent.category.DEFAULT" />
+51-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:37:17-76
+51-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:37:27-73
+52                <category android:name="android.intent.category.LAUNCHER" />
+52-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:38:17-77
+52-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:38:27-74
+53            </intent-filter>
+54        </activity>
+55
+56        <service
+56-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:42:9-49:19
+57            android:name="com.ambient.launcher.NotificationService"
+57-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:42:18-53
+58            android:exported="true"
+58-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:45:13-36
+59            android:label="Ambient Notification Listener"
+59-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:43:13-58
+60            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" >
+60-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:44:13-87
+61            <intent-filter>
+61-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:46:13-48:29
+62                <action android:name="android.service.notification.NotificationListenerService" />
+62-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:47:17-99
+62-->/Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:47:25-96
+63            </intent-filter>
+64        </service>
+65
+66        <activity
+66-->[androidx.compose.ui:ui-tooling-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/fca95be07669d93939ce9f0e406a4c04/transformed/ui-tooling/AndroidManifest.xml:23:9-25:39
+67            android:name="androidx.compose.ui.tooling.PreviewActivity"
+67-->[androidx.compose.ui:ui-tooling-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/fca95be07669d93939ce9f0e406a4c04/transformed/ui-tooling/AndroidManifest.xml:24:13-71
+68            android:exported="true" />
+68-->[androidx.compose.ui:ui-tooling-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/fca95be07669d93939ce9f0e406a4c04/transformed/ui-tooling/AndroidManifest.xml:25:13-36
+69        <activity
+69-->[androidx.compose.ui:ui-test-manifest:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/92294676aa17327a252c50c5947bc668/transformed/ui-test-manifest-1.10.4/AndroidManifest.xml:23:9-26:79
+70            android:name="androidx.activity.ComponentActivity"
+70-->[androidx.compose.ui:ui-test-manifest:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/92294676aa17327a252c50c5947bc668/transformed/ui-test-manifest-1.10.4/AndroidManifest.xml:24:13-63
+71            android:exported="true"
+71-->[androidx.compose.ui:ui-test-manifest:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/92294676aa17327a252c50c5947bc668/transformed/ui-test-manifest-1.10.4/AndroidManifest.xml:25:13-36
+72            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+72-->[androidx.compose.ui:ui-test-manifest:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/92294676aa17327a252c50c5947bc668/transformed/ui-test-manifest-1.10.4/AndroidManifest.xml:26:13-76
+73
+74        <uses-library
+74-->[androidx.window:window:1.5.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a7eed2b03e703056c8b784a5835b9f57/transformed/window-1.5.0/AndroidManifest.xml:23:9-25:40
+75            android:name="androidx.window.extensions"
+75-->[androidx.window:window:1.5.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a7eed2b03e703056c8b784a5835b9f57/transformed/window-1.5.0/AndroidManifest.xml:24:13-54
+76            android:required="false" />
+76-->[androidx.window:window:1.5.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a7eed2b03e703056c8b784a5835b9f57/transformed/window-1.5.0/AndroidManifest.xml:25:13-37
+77        <uses-library
+77-->[androidx.window:window:1.5.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a7eed2b03e703056c8b784a5835b9f57/transformed/window-1.5.0/AndroidManifest.xml:26:9-28:40
+78            android:name="androidx.window.sidecar"
+78-->[androidx.window:window:1.5.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a7eed2b03e703056c8b784a5835b9f57/transformed/window-1.5.0/AndroidManifest.xml:27:13-51
+79            android:required="false" />
+79-->[androidx.window:window:1.5.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a7eed2b03e703056c8b784a5835b9f57/transformed/window-1.5.0/AndroidManifest.xml:28:13-37
+80
+81        <provider
+81-->[androidx.emoji2:emoji2:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/9aa0641d5a2c11ceeae42637936adc45/transformed/emoji2-1.4.0/AndroidManifest.xml:24:9-32:20
+82            android:name="androidx.startup.InitializationProvider"
+82-->[androidx.emoji2:emoji2:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/9aa0641d5a2c11ceeae42637936adc45/transformed/emoji2-1.4.0/AndroidManifest.xml:25:13-67
+83            android:authorities="com.ambient.launcher.androidx-startup"
+83-->[androidx.emoji2:emoji2:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/9aa0641d5a2c11ceeae42637936adc45/transformed/emoji2-1.4.0/AndroidManifest.xml:26:13-68
+84            android:exported="false" >
+84-->[androidx.emoji2:emoji2:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/9aa0641d5a2c11ceeae42637936adc45/transformed/emoji2-1.4.0/AndroidManifest.xml:27:13-37
+85            <meta-data
+85-->[androidx.emoji2:emoji2:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/9aa0641d5a2c11ceeae42637936adc45/transformed/emoji2-1.4.0/AndroidManifest.xml:29:13-31:52
+86                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+86-->[androidx.emoji2:emoji2:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/9aa0641d5a2c11ceeae42637936adc45/transformed/emoji2-1.4.0/AndroidManifest.xml:30:17-75
+87                android:value="androidx.startup" />
+87-->[androidx.emoji2:emoji2:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/9aa0641d5a2c11ceeae42637936adc45/transformed/emoji2-1.4.0/AndroidManifest.xml:31:17-49
+88            <meta-data
+88-->[androidx.lifecycle:lifecycle-process:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/07ec42b342083efebf8d4fecfe22fd25/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:29:13-31:52
+89                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+89-->[androidx.lifecycle:lifecycle-process:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/07ec42b342083efebf8d4fecfe22fd25/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:30:17-78
+90                android:value="androidx.startup" />
+90-->[androidx.lifecycle:lifecycle-process:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/07ec42b342083efebf8d4fecfe22fd25/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:31:17-49
+91            <meta-data
+91-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:29:13-31:52
+92                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+92-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:30:17-85
+93                android:value="androidx.startup" />
+93-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:31:17-49
+94        </provider>
+95
+96        <service
+96-->[androidx.room:room-runtime-android:2.8.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1b4b66518ebde051e2c2c0e1a5b84a37/transformed/room-runtime/AndroidManifest.xml:24:9-28:63
+97            android:name="androidx.room.MultiInstanceInvalidationService"
+97-->[androidx.room:room-runtime-android:2.8.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1b4b66518ebde051e2c2c0e1a5b84a37/transformed/room-runtime/AndroidManifest.xml:25:13-74
+98            android:directBootAware="true"
+98-->[androidx.room:room-runtime-android:2.8.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1b4b66518ebde051e2c2c0e1a5b84a37/transformed/room-runtime/AndroidManifest.xml:26:13-43
+99            android:exported="false" />
+99-->[androidx.room:room-runtime-android:2.8.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1b4b66518ebde051e2c2c0e1a5b84a37/transformed/room-runtime/AndroidManifest.xml:27:13-37
+100
+101        <receiver
+101-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:34:9-52:20
+102            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+102-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:35:13-76
+103            android:directBootAware="false"
+103-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:36:13-44
+104            android:enabled="true"
+104-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:37:13-35
+105            android:exported="true"
+105-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:38:13-36
+106            android:permission="android.permission.DUMP" >
+106-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:39:13-57
+107            <intent-filter>
+107-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:40:13-42:29
+108                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+108-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:41:17-91
+108-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:41:25-88
+109            </intent-filter>
+110            <intent-filter>
+110-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:43:13-45:29
+111                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+111-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:44:17-85
+111-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:44:25-82
+112            </intent-filter>
+113            <intent-filter>
+113-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:46:13-48:29
+114                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+114-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:47:17-88
+114-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:47:25-85
+115            </intent-filter>
+116            <intent-filter>
+116-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:49:13-51:29
+117                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+117-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:50:17-95
+117-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:50:25-92
+118            </intent-filter>
+119        </receiver>
+120    </application>
+121
+122</manifest>

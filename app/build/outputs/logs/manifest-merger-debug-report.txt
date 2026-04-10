@@ -1,0 +1,458 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:2:1-52:12
+INJECTED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:2:1-52:12
+INJECTED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:2:1-52:12
+INJECTED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:2:1-52:12
+MERGED from [androidx.compose.material3:material3-android:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/fe4cf157c66efd8eb74f0aed20613f3e/transformed/material3/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.compose.material:material-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/027ad937060263457980517583183c36/transformed/material/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material:material-ripple-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/98d43ae49cef828e01f5695d13d9d8ef/transformed/material-ripple/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.foundation:foundation-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/4c873a63a17c5c647a1c5127fb786047/transformed/foundation/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.animation:animation-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/7d84d3eaf8843aed13be1cdcb44e3279/transformed/animation/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/43b1f665e4e9cb0b03b531996412f336/transformed/foundation-layout/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.animation:animation-core-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/6da0b73c11aa1345e54f6e08d8ac7e26/transformed/animation-core/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-tooling-data-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/ac17ccceadd8f174f2fa4688b8c616c7/transformed/ui-tooling-data/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-unit-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/61bab9f4fa00a6f18bf605e5235d4351/transformed/ui-unit/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-geometry-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/324ed1f595173ae1688eb1555df48b48/transformed/ui-geometry/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-util-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/46209651fbdf6897340c40554f79ae1a/transformed/ui-util/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-text-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/6ee17c48b935a11c9dcb19e043099013/transformed/ui-text/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0fd55d5633f070de44d7577c94d05a73/transformed/ui-tooling-preview/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.compose.ui:ui-tooling-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/fca95be07669d93939ce9f0e406a4c04/transformed/ui-tooling/AndroidManifest.xml:17:1-28:12
+MERGED from [androidx.compose.ui:ui-graphics-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/8366924321a2298759b432fd35c97f57/transformed/ui-graphics/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material:material-icons-extended-android:1.7.8] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/034cc2ef9a7623fcfb0bb2eabc5183db/transformed/material-icons-extended-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material:material-icons-core-android:1.7.8] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/6c0430325d6fd2dde336f8ce7917afc1/transformed/material-icons-core-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1d5d842b75cc5e3177bf646b56e29a50/transformed/ui/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-test-manifest:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/92294676aa17327a252c50c5947bc668/transformed/ui-test-manifest-1.10.4/AndroidManifest.xml:17:1-29:12
+MERGED from [androidx.activity:activity:1.10.1] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0daf1aedae7dcccffad0032e543bdbbc/transformed/activity-1.10.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.activity:activity-ktx:1.10.1] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/fd6a974cf96ead2a705475e32e0d24fa/transformed/activity-ktx-1.10.1/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.activity:activity-compose:1.10.1] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/25912cb50a387a04f411d7ed9db8a680/transformed/activity-compose-1.10.1/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.autofill:autofill:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1a32f6791c0b1c6fe5ad1d65fd9bf34d/transformed/autofill-1.0.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.transition:transition:1.6.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/b7ec168950a9bd1df40f6dd54325b22c/transformed/transition-1.6.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.window:window-core-android:1.5.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/f433daf427a24de50ed27c68a3b51bb4/transformed/window-core/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.window:window:1.5.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a7eed2b03e703056c8b784a5835b9f57/transformed/window-1.5.0/AndroidManifest.xml:17:1-31:12
+MERGED from [androidx.graphics:graphics-path:1.0.1] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/8d2120c1ba301281923529f86ec38f83/transformed/graphics-path-1.0.1/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.dynamicanimation:dynamicanimation:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/2f8f50c9d076da32c653a8227d61d0a1/transformed/dynamicanimation-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.emoji2:emoji2:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/9aa0641d5a2c11ceeae42637936adc45/transformed/emoji2-1.4.0/AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/b2362547ba2cff5e11cee69e43bffaf6/transformed/legacy-support-core-utils-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.loader:loader:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/6ddd6b49bc8da23214f8649be8955f6f/transformed/loader-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.core:core:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/919755bcf6cd7e74d719b438678c758f/transformed/core-1.18.0/AndroidManifest.xml:17:1-30:12
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/939346949904ab9db8de5b4943a7a748/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:17:1-23:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a050e5c40c1dc30f0008225e77ada283/transformed/lifecycle-livedata-core-ktx-2.9.4/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1c65b21770cafc5595463c8a893f3624/transformed/lifecycle-livedata-2.9.4/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-process:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/07ec42b342083efebf8d4fecfe22fd25/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1bb1dd635cb6df0edff0852fc68ba207/transformed/lifecycle-livedata-core-2.9.4/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/f7d054a3c9e2578d67b5a5c2bdd4d145/transformed/lifecycle-viewmodel-2.9.4/AndroidManifest.xml:2:1-5:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/03432f35abaa8fedce4b1b2bffea56c9/transformed/lifecycle-viewmodel-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.compose.runtime:runtime-retain-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/7cdb65058eebd77aba0da49909220faa/transformed/runtime-retain/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.runtime:runtime-annotation-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/601c360354555a7dc0e709767bdce395/transformed/runtime-annotation/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.runtime:runtime-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/875921a472c5cf539e14554fb972e7f6/transformed/runtime/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/20a539955006a61796f68c9aeac533e1/transformed/runtime-saveable/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.savedstate:savedstate-ktx:1.3.2] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/568b1fa837f314138ae94efb5f4fc93e/transformed/savedstate-ktx-1.3.2/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.savedstate:savedstate-compose-android:1.3.2] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/ccb8b8c5bde6ef7b964069193db8e683/transformed/savedstate-compose/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.savedstate:savedstate-android:1.3.2] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a0231d74a8cdac6eb5897cc6109d3f1b/transformed/savedstate-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/aea77a75f6acd0f0ece4cbff3c9e4a79/transformed/lifecycle-runtime-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/cef0b98b0f9c745d34d0ad80285214fd/transformed/lifecycle-viewmodel-ktx-2.9.4/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/4aa202264462519e444fad244a7502bc/transformed/lifecycle-runtime-ktx/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-compose-android:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/bd63c26fc958fa414ac57300e1db8dcc/transformed/lifecycle-runtime-compose-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate-android:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a466b9dca69f24f88c243104dd55f375/transformed/lifecycle-viewmodel-savedstate-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.core:core-ktx:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0b39592ce17af75bfa5c3c97d2066e00/transformed/core-ktx-1.18.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.room:room-runtime-android:2.8.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1b4b66518ebde051e2c2c0e1a5b84a37/transformed/room-runtime/AndroidManifest.xml:17:1-31:12
+MERGED from [androidx.room:room-ktx:2.8.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/6a47e1708c42cd0fa7417fb7883f5579/transformed/room-ktx-2.8.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.core:core-viewtree:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/3b6cd26813d95dfa4b2703ea092943cf/transformed/core-viewtree-1.0.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.annotation:annotation-experimental:1.5.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/24d038b111e949accc959e12548f776a/transformed/annotation-experimental-1.5.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.interpolator:interpolator:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/5a78a17223f28d024e79820c02ef6c28/transformed/interpolator-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:17:1-55:12
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/edbd99a0251b257acdad62cff6e38745/transformed/startup-runtime-1.1.1/AndroidManifest.xml:17:1-33:12
+MERGED from [androidx.tracing:tracing:1.2.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/56bb0384f3d89ba81c929b1ddf3a7994/transformed/tracing-1.2.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a3b5a01ac8837876294b67a0991ebf40/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:17:1-27:12
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/76cec08f2e225476657981d4d53b45a3/transformed/core-runtime-2.2.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.sqlite:sqlite-framework-android:2.6.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a3ba8e974d4f8b0df99fa832587a8710/transformed/sqlite-framework/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.sqlite:sqlite-android:2.6.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/59af0d5c61663f2ef9a5a5ab967edfbc/transformed/sqlite/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.documentfile:documentfile:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/4c7a89b8b97987aed376726d5297bfd1/transformed/documentfile-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/e1b06e06e2570adcebf65ae0f9ef7165/transformed/localbroadcastmanager-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.print:print:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/6ab60a7345282b9563af8d1c6ed1d8d8/transformed/print-1.0.0/AndroidManifest.xml:17:1-22:12
+	package
+		INJECTED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml
+	android:versionName
+		INJECTED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml
+	xmlns:tools
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:3:5-51
+	android:versionCode
+		INJECTED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml
+	xmlns:android
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:2:11-69
+uses-permission#android.permission.QUERY_ALL_PACKAGES
+ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:6:5-7:53
+	tools:ignore
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:7:9-50
+	android:name
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:6:22-74
+uses-permission#android.permission.INTERNET
+ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:10:5-67
+	android:name
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:10:22-64
+uses-permission#android.permission.ACCESS_COARSE_LOCATION
+ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:11:5-81
+	android:name
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:11:22-78
+application
+ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:13:5-50:19
+INJECTED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:13:5-50:19
+MERGED from [androidx.compose.ui:ui-tooling-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/fca95be07669d93939ce9f0e406a4c04/transformed/ui-tooling/AndroidManifest.xml:22:5-26:19
+MERGED from [androidx.compose.ui:ui-tooling-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/fca95be07669d93939ce9f0e406a4c04/transformed/ui-tooling/AndroidManifest.xml:22:5-26:19
+MERGED from [androidx.compose.ui:ui-test-manifest:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/92294676aa17327a252c50c5947bc668/transformed/ui-test-manifest-1.10.4/AndroidManifest.xml:22:5-27:19
+MERGED from [androidx.compose.ui:ui-test-manifest:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/92294676aa17327a252c50c5947bc668/transformed/ui-test-manifest-1.10.4/AndroidManifest.xml:22:5-27:19
+MERGED from [androidx.window:window:1.5.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a7eed2b03e703056c8b784a5835b9f57/transformed/window-1.5.0/AndroidManifest.xml:22:5-29:19
+MERGED from [androidx.window:window:1.5.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a7eed2b03e703056c8b784a5835b9f57/transformed/window-1.5.0/AndroidManifest.xml:22:5-29:19
+MERGED from [androidx.emoji2:emoji2:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/9aa0641d5a2c11ceeae42637936adc45/transformed/emoji2-1.4.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.emoji2:emoji2:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/9aa0641d5a2c11ceeae42637936adc45/transformed/emoji2-1.4.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.core:core:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/919755bcf6cd7e74d719b438678c758f/transformed/core-1.18.0/AndroidManifest.xml:28:5-89
+MERGED from [androidx.core:core:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/919755bcf6cd7e74d719b438678c758f/transformed/core-1.18.0/AndroidManifest.xml:28:5-89
+MERGED from [androidx.lifecycle:lifecycle-process:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/07ec42b342083efebf8d4fecfe22fd25/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.lifecycle:lifecycle-process:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/07ec42b342083efebf8d4fecfe22fd25/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.room:room-runtime-android:2.8.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1b4b66518ebde051e2c2c0e1a5b84a37/transformed/room-runtime/AndroidManifest.xml:23:5-29:19
+MERGED from [androidx.room:room-runtime-android:2.8.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1b4b66518ebde051e2c2c0e1a5b84a37/transformed/room-runtime/AndroidManifest.xml:23:5-29:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/edbd99a0251b257acdad62cff6e38745/transformed/startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/edbd99a0251b257acdad62cff6e38745/transformed/startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a3b5a01ac8837876294b67a0991ebf40/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a3b5a01ac8837876294b67a0991ebf40/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
+	android:extractNativeLibs
+		INJECTED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml
+	android:appComponentFactory
+		ADDED from [androidx.core:core:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/919755bcf6cd7e74d719b438678c758f/transformed/core-1.18.0/AndroidManifest.xml:28:18-86
+	android:supportsRtl
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:20:9-35
+	android:label
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:18:9-41
+	android:fullBackupContent
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:16:9-54
+	android:roundIcon
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:19:9-54
+	tools:targetApi
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:22:9-29
+	android:icon
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:17:9-43
+	android:allowBackup
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:14:9-35
+	android:theme
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:21:9-62
+	android:dataExtractionRules
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:15:9-65
+activity#com.ambient.launcher.MainActivity
+ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:25:9-40:20
+	android:clearTaskOnLaunch
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:29:13-45
+	android:stateNotNeeded
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:30:13-42
+	android:launchMode
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:28:13-44
+	android:exported
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:27:13-36
+	android:theme
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:31:13-66
+	android:name
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:26:13-41
+intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.DEFAULT+category:name:android.intent.category.HOME+category:name:android.intent.category.LAUNCHER
+ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:32:13-39:29
+action#android.intent.action.MAIN
+ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:33:17-69
+	android:name
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:33:25-66
+category#android.intent.category.HOME
+ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:36:17-73
+	android:name
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:36:27-70
+category#android.intent.category.DEFAULT
+ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:37:17-76
+	android:name
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:37:27-73
+category#android.intent.category.LAUNCHER
+ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:38:17-77
+	android:name
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:38:27-74
+service#com.ambient.launcher.NotificationService
+ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:42:9-49:19
+	android:label
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:43:13-58
+	android:exported
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:45:13-36
+	android:permission
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:44:13-87
+	android:name
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:42:18-53
+intent-filter#action:name:android.service.notification.NotificationListenerService
+ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:46:13-48:29
+action#android.service.notification.NotificationListenerService
+ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:47:17-99
+	android:name
+		ADDED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml:47:25-96
+uses-sdk
+INJECTED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml
+INJECTED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml
+MERGED from [androidx.compose.material3:material3-android:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/fe4cf157c66efd8eb74f0aed20613f3e/transformed/material3/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.material3:material3-android:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/fe4cf157c66efd8eb74f0aed20613f3e/transformed/material3/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.material:material-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/027ad937060263457980517583183c36/transformed/material/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/027ad937060263457980517583183c36/transformed/material/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-ripple-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/98d43ae49cef828e01f5695d13d9d8ef/transformed/material-ripple/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-ripple-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/98d43ae49cef828e01f5695d13d9d8ef/transformed/material-ripple/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/4c873a63a17c5c647a1c5127fb786047/transformed/foundation/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/4c873a63a17c5c647a1c5127fb786047/transformed/foundation/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/7d84d3eaf8843aed13be1cdcb44e3279/transformed/animation/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/7d84d3eaf8843aed13be1cdcb44e3279/transformed/animation/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/43b1f665e4e9cb0b03b531996412f336/transformed/foundation-layout/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/43b1f665e4e9cb0b03b531996412f336/transformed/foundation-layout/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-core-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/6da0b73c11aa1345e54f6e08d8ac7e26/transformed/animation-core/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-core-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/6da0b73c11aa1345e54f6e08d8ac7e26/transformed/animation-core/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-tooling-data-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/ac17ccceadd8f174f2fa4688b8c616c7/transformed/ui-tooling-data/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-tooling-data-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/ac17ccceadd8f174f2fa4688b8c616c7/transformed/ui-tooling-data/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-unit-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/61bab9f4fa00a6f18bf605e5235d4351/transformed/ui-unit/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-unit-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/61bab9f4fa00a6f18bf605e5235d4351/transformed/ui-unit/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-geometry-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/324ed1f595173ae1688eb1555df48b48/transformed/ui-geometry/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-geometry-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/324ed1f595173ae1688eb1555df48b48/transformed/ui-geometry/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-util-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/46209651fbdf6897340c40554f79ae1a/transformed/ui-util/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-util-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/46209651fbdf6897340c40554f79ae1a/transformed/ui-util/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-text-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/6ee17c48b935a11c9dcb19e043099013/transformed/ui-text/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-text-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/6ee17c48b935a11c9dcb19e043099013/transformed/ui-text/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0fd55d5633f070de44d7577c94d05a73/transformed/ui-tooling-preview/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0fd55d5633f070de44d7577c94d05a73/transformed/ui-tooling-preview/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-tooling-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/fca95be07669d93939ce9f0e406a4c04/transformed/ui-tooling/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-tooling-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/fca95be07669d93939ce9f0e406a4c04/transformed/ui-tooling/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-graphics-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/8366924321a2298759b432fd35c97f57/transformed/ui-graphics/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-graphics-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/8366924321a2298759b432fd35c97f57/transformed/ui-graphics/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-extended-android:1.7.8] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/034cc2ef9a7623fcfb0bb2eabc5183db/transformed/material-icons-extended-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-extended-android:1.7.8] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/034cc2ef9a7623fcfb0bb2eabc5183db/transformed/material-icons-extended-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-core-android:1.7.8] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/6c0430325d6fd2dde336f8ce7917afc1/transformed/material-icons-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-core-android:1.7.8] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/6c0430325d6fd2dde336f8ce7917afc1/transformed/material-icons-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1d5d842b75cc5e3177bf646b56e29a50/transformed/ui/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1d5d842b75cc5e3177bf646b56e29a50/transformed/ui/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-test-manifest:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/92294676aa17327a252c50c5947bc668/transformed/ui-test-manifest-1.10.4/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-test-manifest:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/92294676aa17327a252c50c5947bc668/transformed/ui-test-manifest-1.10.4/AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity:1.10.1] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0daf1aedae7dcccffad0032e543bdbbc/transformed/activity-1.10.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity:1.10.1] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0daf1aedae7dcccffad0032e543bdbbc/transformed/activity-1.10.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity-ktx:1.10.1] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/fd6a974cf96ead2a705475e32e0d24fa/transformed/activity-ktx-1.10.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-ktx:1.10.1] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/fd6a974cf96ead2a705475e32e0d24fa/transformed/activity-ktx-1.10.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-compose:1.10.1] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/25912cb50a387a04f411d7ed9db8a680/transformed/activity-compose-1.10.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-compose:1.10.1] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/25912cb50a387a04f411d7ed9db8a680/transformed/activity-compose-1.10.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.autofill:autofill:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1a32f6791c0b1c6fe5ad1d65fd9bf34d/transformed/autofill-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.autofill:autofill:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1a32f6791c0b1c6fe5ad1d65fd9bf34d/transformed/autofill-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.transition:transition:1.6.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/b7ec168950a9bd1df40f6dd54325b22c/transformed/transition-1.6.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.transition:transition:1.6.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/b7ec168950a9bd1df40f6dd54325b22c/transformed/transition-1.6.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.window:window-core-android:1.5.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/f433daf427a24de50ed27c68a3b51bb4/transformed/window-core/AndroidManifest.xml:5:5-44
+MERGED from [androidx.window:window-core-android:1.5.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/f433daf427a24de50ed27c68a3b51bb4/transformed/window-core/AndroidManifest.xml:5:5-44
+MERGED from [androidx.window:window:1.5.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a7eed2b03e703056c8b784a5835b9f57/transformed/window-1.5.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.window:window:1.5.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a7eed2b03e703056c8b784a5835b9f57/transformed/window-1.5.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.graphics:graphics-path:1.0.1] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/8d2120c1ba301281923529f86ec38f83/transformed/graphics-path-1.0.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.graphics:graphics-path:1.0.1] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/8d2120c1ba301281923529f86ec38f83/transformed/graphics-path-1.0.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.dynamicanimation:dynamicanimation:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/2f8f50c9d076da32c653a8227d61d0a1/transformed/dynamicanimation-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.dynamicanimation:dynamicanimation:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/2f8f50c9d076da32c653a8227d61d0a1/transformed/dynamicanimation-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.emoji2:emoji2:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/9aa0641d5a2c11ceeae42637936adc45/transformed/emoji2-1.4.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.emoji2:emoji2:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/9aa0641d5a2c11ceeae42637936adc45/transformed/emoji2-1.4.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/b2362547ba2cff5e11cee69e43bffaf6/transformed/legacy-support-core-utils-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/b2362547ba2cff5e11cee69e43bffaf6/transformed/legacy-support-core-utils-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.loader:loader:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/6ddd6b49bc8da23214f8649be8955f6f/transformed/loader-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.loader:loader:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/6ddd6b49bc8da23214f8649be8955f6f/transformed/loader-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/919755bcf6cd7e74d719b438678c758f/transformed/core-1.18.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/919755bcf6cd7e74d719b438678c758f/transformed/core-1.18.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/939346949904ab9db8de5b4943a7a748/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:20:5-21:38
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/939346949904ab9db8de5b4943a7a748/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:20:5-21:38
+MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a050e5c40c1dc30f0008225e77ada283/transformed/lifecycle-livedata-core-ktx-2.9.4/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a050e5c40c1dc30f0008225e77ada283/transformed/lifecycle-livedata-core-ktx-2.9.4/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1c65b21770cafc5595463c8a893f3624/transformed/lifecycle-livedata-2.9.4/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1c65b21770cafc5595463c8a893f3624/transformed/lifecycle-livedata-2.9.4/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/07ec42b342083efebf8d4fecfe22fd25/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/07ec42b342083efebf8d4fecfe22fd25/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1bb1dd635cb6df0edff0852fc68ba207/transformed/lifecycle-livedata-core-2.9.4/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1bb1dd635cb6df0edff0852fc68ba207/transformed/lifecycle-livedata-core-2.9.4/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/f7d054a3c9e2578d67b5a5c2bdd4d145/transformed/lifecycle-viewmodel-2.9.4/AndroidManifest.xml:4:5-43
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/f7d054a3c9e2578d67b5a5c2bdd4d145/transformed/lifecycle-viewmodel-2.9.4/AndroidManifest.xml:4:5-43
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/03432f35abaa8fedce4b1b2bffea56c9/transformed/lifecycle-viewmodel-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/03432f35abaa8fedce4b1b2bffea56c9/transformed/lifecycle-viewmodel-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.runtime:runtime-retain-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/7cdb65058eebd77aba0da49909220faa/transformed/runtime-retain/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-retain-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/7cdb65058eebd77aba0da49909220faa/transformed/runtime-retain/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-annotation-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/601c360354555a7dc0e709767bdce395/transformed/runtime-annotation/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-annotation-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/601c360354555a7dc0e709767bdce395/transformed/runtime-annotation/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/875921a472c5cf539e14554fb972e7f6/transformed/runtime/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/875921a472c5cf539e14554fb972e7f6/transformed/runtime/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/20a539955006a61796f68c9aeac533e1/transformed/runtime-saveable/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/20a539955006a61796f68c9aeac533e1/transformed/runtime-saveable/AndroidManifest.xml:5:5-44
+MERGED from [androidx.savedstate:savedstate-ktx:1.3.2] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/568b1fa837f314138ae94efb5f4fc93e/transformed/savedstate-ktx-1.3.2/AndroidManifest.xml:5:5-44
+MERGED from [androidx.savedstate:savedstate-ktx:1.3.2] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/568b1fa837f314138ae94efb5f4fc93e/transformed/savedstate-ktx-1.3.2/AndroidManifest.xml:5:5-44
+MERGED from [androidx.savedstate:savedstate-compose-android:1.3.2] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/ccb8b8c5bde6ef7b964069193db8e683/transformed/savedstate-compose/AndroidManifest.xml:5:5-44
+MERGED from [androidx.savedstate:savedstate-compose-android:1.3.2] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/ccb8b8c5bde6ef7b964069193db8e683/transformed/savedstate-compose/AndroidManifest.xml:5:5-44
+MERGED from [androidx.savedstate:savedstate-android:1.3.2] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a0231d74a8cdac6eb5897cc6109d3f1b/transformed/savedstate-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate-android:1.3.2] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a0231d74a8cdac6eb5897cc6109d3f1b/transformed/savedstate-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/aea77a75f6acd0f0ece4cbff3c9e4a79/transformed/lifecycle-runtime-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/aea77a75f6acd0f0ece4cbff3c9e4a79/transformed/lifecycle-runtime-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/cef0b98b0f9c745d34d0ad80285214fd/transformed/lifecycle-viewmodel-ktx-2.9.4/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/cef0b98b0f9c745d34d0ad80285214fd/transformed/lifecycle-viewmodel-ktx-2.9.4/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/4aa202264462519e444fad244a7502bc/transformed/lifecycle-runtime-ktx/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/4aa202264462519e444fad244a7502bc/transformed/lifecycle-runtime-ktx/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-compose-android:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/bd63c26fc958fa414ac57300e1db8dcc/transformed/lifecycle-runtime-compose-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-compose-android:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/bd63c26fc958fa414ac57300e1db8dcc/transformed/lifecycle-runtime-compose-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate-android:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a466b9dca69f24f88c243104dd55f375/transformed/lifecycle-viewmodel-savedstate-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate-android:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a466b9dca69f24f88c243104dd55f375/transformed/lifecycle-viewmodel-savedstate-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core-ktx:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0b39592ce17af75bfa5c3c97d2066e00/transformed/core-ktx-1.18.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core-ktx:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0b39592ce17af75bfa5c3c97d2066e00/transformed/core-ktx-1.18.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.room:room-runtime-android:2.8.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1b4b66518ebde051e2c2c0e1a5b84a37/transformed/room-runtime/AndroidManifest.xml:21:5-44
+MERGED from [androidx.room:room-runtime-android:2.8.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1b4b66518ebde051e2c2c0e1a5b84a37/transformed/room-runtime/AndroidManifest.xml:21:5-44
+MERGED from [androidx.room:room-ktx:2.8.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/6a47e1708c42cd0fa7417fb7883f5579/transformed/room-ktx-2.8.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.room:room-ktx:2.8.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/6a47e1708c42cd0fa7417fb7883f5579/transformed/room-ktx-2.8.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core-viewtree:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/3b6cd26813d95dfa4b2703ea092943cf/transformed/core-viewtree-1.0.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core-viewtree:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/3b6cd26813d95dfa4b2703ea092943cf/transformed/core-viewtree-1.0.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.5.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/24d038b111e949accc959e12548f776a/transformed/annotation-experimental-1.5.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.5.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/24d038b111e949accc959e12548f776a/transformed/annotation-experimental-1.5.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/5a78a17223f28d024e79820c02ef6c28/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/5a78a17223f28d024e79820c02ef6c28/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/edbd99a0251b257acdad62cff6e38745/transformed/startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/edbd99a0251b257acdad62cff6e38745/transformed/startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.tracing:tracing:1.2.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/56bb0384f3d89ba81c929b1ddf3a7994/transformed/tracing-1.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.tracing:tracing:1.2.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/56bb0384f3d89ba81c929b1ddf3a7994/transformed/tracing-1.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a3b5a01ac8837876294b67a0991ebf40/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a3b5a01ac8837876294b67a0991ebf40/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/76cec08f2e225476657981d4d53b45a3/transformed/core-runtime-2.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/76cec08f2e225476657981d4d53b45a3/transformed/core-runtime-2.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.sqlite:sqlite-framework-android:2.6.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a3ba8e974d4f8b0df99fa832587a8710/transformed/sqlite-framework/AndroidManifest.xml:20:5-44
+MERGED from [androidx.sqlite:sqlite-framework-android:2.6.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a3ba8e974d4f8b0df99fa832587a8710/transformed/sqlite-framework/AndroidManifest.xml:20:5-44
+MERGED from [androidx.sqlite:sqlite-android:2.6.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/59af0d5c61663f2ef9a5a5ab967edfbc/transformed/sqlite/AndroidManifest.xml:20:5-44
+MERGED from [androidx.sqlite:sqlite-android:2.6.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/59af0d5c61663f2ef9a5a5ab967edfbc/transformed/sqlite/AndroidManifest.xml:20:5-44
+MERGED from [androidx.documentfile:documentfile:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/4c7a89b8b97987aed376726d5297bfd1/transformed/documentfile-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.documentfile:documentfile:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/4c7a89b8b97987aed376726d5297bfd1/transformed/documentfile-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/e1b06e06e2570adcebf65ae0f9ef7165/transformed/localbroadcastmanager-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/e1b06e06e2570adcebf65ae0f9ef7165/transformed/localbroadcastmanager-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.print:print:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/6ab60a7345282b9563af8d1c6ed1d8d8/transformed/print-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.print:print:1.0.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/6ab60a7345282b9563af8d1c6ed1d8d8/transformed/print-1.0.0/AndroidManifest.xml:20:5-44
+	android:targetSdkVersion
+		INJECTED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/AndroidManifest.xml
+activity#androidx.compose.ui.tooling.PreviewActivity
+ADDED from [androidx.compose.ui:ui-tooling-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/fca95be07669d93939ce9f0e406a4c04/transformed/ui-tooling/AndroidManifest.xml:23:9-25:39
+	android:exported
+		ADDED from [androidx.compose.ui:ui-tooling-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/fca95be07669d93939ce9f0e406a4c04/transformed/ui-tooling/AndroidManifest.xml:25:13-36
+	android:name
+		ADDED from [androidx.compose.ui:ui-tooling-android:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/fca95be07669d93939ce9f0e406a4c04/transformed/ui-tooling/AndroidManifest.xml:24:13-71
+activity#androidx.activity.ComponentActivity
+ADDED from [androidx.compose.ui:ui-test-manifest:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/92294676aa17327a252c50c5947bc668/transformed/ui-test-manifest-1.10.4/AndroidManifest.xml:23:9-26:79
+	android:exported
+		ADDED from [androidx.compose.ui:ui-test-manifest:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/92294676aa17327a252c50c5947bc668/transformed/ui-test-manifest-1.10.4/AndroidManifest.xml:25:13-36
+	android:theme
+		ADDED from [androidx.compose.ui:ui-test-manifest:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/92294676aa17327a252c50c5947bc668/transformed/ui-test-manifest-1.10.4/AndroidManifest.xml:26:13-76
+	android:name
+		ADDED from [androidx.compose.ui:ui-test-manifest:1.10.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/92294676aa17327a252c50c5947bc668/transformed/ui-test-manifest-1.10.4/AndroidManifest.xml:24:13-63
+uses-library#androidx.window.extensions
+ADDED from [androidx.window:window:1.5.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a7eed2b03e703056c8b784a5835b9f57/transformed/window-1.5.0/AndroidManifest.xml:23:9-25:40
+	android:required
+		ADDED from [androidx.window:window:1.5.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a7eed2b03e703056c8b784a5835b9f57/transformed/window-1.5.0/AndroidManifest.xml:25:13-37
+	android:name
+		ADDED from [androidx.window:window:1.5.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a7eed2b03e703056c8b784a5835b9f57/transformed/window-1.5.0/AndroidManifest.xml:24:13-54
+uses-library#androidx.window.sidecar
+ADDED from [androidx.window:window:1.5.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a7eed2b03e703056c8b784a5835b9f57/transformed/window-1.5.0/AndroidManifest.xml:26:9-28:40
+	android:required
+		ADDED from [androidx.window:window:1.5.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a7eed2b03e703056c8b784a5835b9f57/transformed/window-1.5.0/AndroidManifest.xml:28:13-37
+	android:name
+		ADDED from [androidx.window:window:1.5.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/a7eed2b03e703056c8b784a5835b9f57/transformed/window-1.5.0/AndroidManifest.xml:27:13-51
+provider#androidx.startup.InitializationProvider
+ADDED from [androidx.emoji2:emoji2:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/9aa0641d5a2c11ceeae42637936adc45/transformed/emoji2-1.4.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.lifecycle:lifecycle-process:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/07ec42b342083efebf8d4fecfe22fd25/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.lifecycle:lifecycle-process:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/07ec42b342083efebf8d4fecfe22fd25/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/edbd99a0251b257acdad62cff6e38745/transformed/startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/edbd99a0251b257acdad62cff6e38745/transformed/startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
+	tools:node
+		ADDED from [androidx.emoji2:emoji2:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/9aa0641d5a2c11ceeae42637936adc45/transformed/emoji2-1.4.0/AndroidManifest.xml:28:13-31
+	android:authorities
+		ADDED from [androidx.emoji2:emoji2:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/9aa0641d5a2c11ceeae42637936adc45/transformed/emoji2-1.4.0/AndroidManifest.xml:26:13-68
+	android:exported
+		ADDED from [androidx.emoji2:emoji2:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/9aa0641d5a2c11ceeae42637936adc45/transformed/emoji2-1.4.0/AndroidManifest.xml:27:13-37
+	android:name
+		ADDED from [androidx.emoji2:emoji2:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/9aa0641d5a2c11ceeae42637936adc45/transformed/emoji2-1.4.0/AndroidManifest.xml:25:13-67
+meta-data#androidx.emoji2.text.EmojiCompatInitializer
+ADDED from [androidx.emoji2:emoji2:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/9aa0641d5a2c11ceeae42637936adc45/transformed/emoji2-1.4.0/AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.emoji2:emoji2:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/9aa0641d5a2c11ceeae42637936adc45/transformed/emoji2-1.4.0/AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.emoji2:emoji2:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/9aa0641d5a2c11ceeae42637936adc45/transformed/emoji2-1.4.0/AndroidManifest.xml:30:17-75
+permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/919755bcf6cd7e74d719b438678c758f/transformed/core-1.18.0/AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/919755bcf6cd7e74d719b438678c758f/transformed/core-1.18.0/AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/919755bcf6cd7e74d719b438678c758f/transformed/core-1.18.0/AndroidManifest.xml:23:9-81
+permission#com.ambient.launcher.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/919755bcf6cd7e74d719b438678c758f/transformed/core-1.18.0/AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/919755bcf6cd7e74d719b438678c758f/transformed/core-1.18.0/AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/919755bcf6cd7e74d719b438678c758f/transformed/core-1.18.0/AndroidManifest.xml:23:9-81
+uses-permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/919755bcf6cd7e74d719b438678c758f/transformed/core-1.18.0/AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/919755bcf6cd7e74d719b438678c758f/transformed/core-1.18.0/AndroidManifest.xml:26:22-94
+uses-permission#com.ambient.launcher.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/919755bcf6cd7e74d719b438678c758f/transformed/core-1.18.0/AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.18.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/919755bcf6cd7e74d719b438678c758f/transformed/core-1.18.0/AndroidManifest.xml:26:22-94
+meta-data#androidx.lifecycle.ProcessLifecycleInitializer
+ADDED from [androidx.lifecycle:lifecycle-process:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/07ec42b342083efebf8d4fecfe22fd25/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.lifecycle:lifecycle-process:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/07ec42b342083efebf8d4fecfe22fd25/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.lifecycle:lifecycle-process:2.9.4] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/07ec42b342083efebf8d4fecfe22fd25/transformed/lifecycle-process-2.9.4/AndroidManifest.xml:30:17-78
+service#androidx.room.MultiInstanceInvalidationService
+ADDED from [androidx.room:room-runtime-android:2.8.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1b4b66518ebde051e2c2c0e1a5b84a37/transformed/room-runtime/AndroidManifest.xml:24:9-28:63
+	android:exported
+		ADDED from [androidx.room:room-runtime-android:2.8.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1b4b66518ebde051e2c2c0e1a5b84a37/transformed/room-runtime/AndroidManifest.xml:27:13-37
+	tools:ignore
+		ADDED from [androidx.room:room-runtime-android:2.8.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1b4b66518ebde051e2c2c0e1a5b84a37/transformed/room-runtime/AndroidManifest.xml:28:13-60
+	android:directBootAware
+		ADDED from [androidx.room:room-runtime-android:2.8.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1b4b66518ebde051e2c2c0e1a5b84a37/transformed/room-runtime/AndroidManifest.xml:26:13-43
+	android:name
+		ADDED from [androidx.room:room-runtime-android:2.8.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/1b4b66518ebde051e2c2c0e1a5b84a37/transformed/room-runtime/AndroidManifest.xml:25:13-74
+meta-data#androidx.profileinstaller.ProfileInstallerInitializer
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:30:17-85
+receiver#androidx.profileinstaller.ProfileInstallReceiver
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:34:9-52:20
+	android:enabled
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:37:13-35
+	android:exported
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:38:13-36
+	android:permission
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:39:13-57
+	android:directBootAware
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:36:13-44
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:35:13-76
+intent-filter#action:name:androidx.profileinstaller.action.INSTALL_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:40:13-42:29
+action#androidx.profileinstaller.action.INSTALL_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:41:17-91
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:41:25-88
+intent-filter#action:name:androidx.profileinstaller.action.SKIP_FILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:43:13-45:29
+action#androidx.profileinstaller.action.SKIP_FILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:44:17-85
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:44:25-82
+intent-filter#action:name:androidx.profileinstaller.action.SAVE_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:46:13-48:29
+action#androidx.profileinstaller.action.SAVE_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:47:17-88
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:47:25-85
+intent-filter#action:name:androidx.profileinstaller.action.BENCHMARK_OPERATION
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:49:13-51:29
+action#androidx.profileinstaller.action.BENCHMARK_OPERATION
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:50:17-95
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /Users/tanjimislam/.gradle/caches/9.3.1/transforms/0cdc73059b7cf16b72e1cb2a3ac30a47/transformed/profileinstaller-1.4.0/AndroidManifest.xml:50:25-92

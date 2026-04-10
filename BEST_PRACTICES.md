@@ -11,13 +11,15 @@
 - Keep One UI as the wallpaper owner; the launcher should adapt, not replace that stack.
 
 ## 3. Home System Discipline
-- Treat the home screen as a section system, not a one-off dashboard.
+- Treat the home screen as a flat section system directly floating on the wallpaper.
 - Each app should belong to one launcher bucket at most.
-- Hide Samsung/system clutter through the hidden bucket instead of polluting the main home.
-- Keep the left industrial page for navigation, hidden/system access, and settings.
+- Keep home visibility separate from assignment so apps can stay in the app menu without appearing on home.
+- **Do not wrap apps in nested section cards.** Let the tiles sit directly on the wallpaper grid.
+- Keep the left industrial page for navigation, app editing, and settings.
 
 ## 4. Compose Performance
-- Use `derivedStateOf` for filtered app lists and bucket projections.
+- **Lazy Icon Loading:** Do NOT load Android app `Drawable`s or `ImageBitmap`s in bulk during startup inside `PackageManager` queries. Always keep state models (like `AppInfo`) lightweight with only text/IDs, and fetch icons lazily on the UI thread (via `rememberAppIcon` or Coil) only when the tile renders.
+- **Avoid State Thrashing:** Do not chain multiple `derivedStateOf` blocks mapping hundreds of apps in the UI thread for simple interactions.
 - Keep large surfaces simple; do not introduce live blur or heavy shader effects.
 - Prefer reusable card primitives over repeatedly inlining complex UI blocks.
 
@@ -29,4 +31,5 @@
 
 ## 6. Deferred Integrations
 - Messaging/email recents should be built later as dedicated surfaces, not hacked into the current app grouping layer.
-- Widget hosting, notes editing, and feed/API integrations should sit on top of the current section model, not bypass it.
+- Widget hosting and notes editing should sit on top of the current section model, not bypass it.
+- Weather and RSS should stay lightweight and launcher-native rather than trying to embed heavy widget templates.
