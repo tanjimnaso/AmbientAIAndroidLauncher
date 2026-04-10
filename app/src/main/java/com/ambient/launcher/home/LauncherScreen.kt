@@ -39,7 +39,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -617,6 +619,7 @@ private fun HomePage(
     onAppLongClick: (AppInfo) -> Unit
 ) {
     var aiQuery by remember { mutableStateOf("") }
+    var isTodoOpen by remember { mutableStateOf(false) }
 
     LazyColumn(
         state = listState,
@@ -647,7 +650,7 @@ private fun HomePage(
             )
         }
 
-        item { Spacer(modifier = Modifier.height(16.dp)) }
+        item { Spacer(modifier = Modifier.height(24.dp)) }
 
         item {
             ProjectCard(
@@ -662,11 +665,12 @@ private fun HomePage(
                     "Register Syne font",
                     "Update Today styling",
                     "Refactor ProjectCard"
-                )
+                ),
+                onClick = { isTodoOpen = true }
             )
         }
 
-        item { Spacer(modifier = Modifier.height(8.dp)) }
+        item { Spacer(modifier = Modifier.height(20.dp)) }
 
         item {
             val readingState by readingViewModel.readingState.collectAsStateWithLifecycle()
@@ -725,7 +729,7 @@ private fun HomePage(
                     modifier = Modifier.padding(horizontal = 22.dp, vertical = 20.dp)
                 ) {
                     Text(
-                        text = "${battery.percentage}% Battery",
+                        text = "Battery ${battery.percentage}%",
                         style = MaterialTheme.typography.headlineMedium.copy(
                             fontWeight = FontWeight.Normal,
                             fontFamily = SyneFontFamily,
@@ -1072,31 +1076,49 @@ private fun IndustrialMenuRow(
                     }
                 }
         )
-        if (apps.isNotEmpty() && !isCollapsed) {
-            androidx.compose.foundation.layout.FlowRow(
+        val expandedHeight = remember { androidx.compose.animation.core.Animatable(if (isCollapsed) 0f else 1f) }
+
+        LaunchedEffect(isCollapsed) {
+            expandedHeight.animateTo(if (isCollapsed) 0f else 1f, animationSpec = tween(300))
+        }
+
+        if (apps.isNotEmpty()) {
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 22.dp, top = 6.dp, bottom = 14.dp, end = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                    .graphicsLayer {
+                        alpha = expandedHeight.value
+                        scaleY = expandedHeight.value * 0.8f + 0.2f
+                    }
+                    .animateContentSize()
             ) {
-                apps.forEach { app ->
-                    androidx.compose.runtime.key(app.packageName) {
-                        Surface(
-                            shape = RoundedCornerShape(50),
-                            color = Color.Transparent,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, AmbientTheme.palette.textPrimary.copy(alpha = 0.4f)),
-                            modifier = Modifier.combinedClickable(
-                                onClick = { onAppClick(app) },
-                                onLongClick = { onAppLongClick(app) }
-                            )
-                        ) {
-                            Text(
-                                text = app.label,
-                                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Normal),
-                                color = AmbientTheme.palette.textPrimary,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                            )
+                if (!isCollapsed) {
+                    androidx.compose.foundation.layout.FlowRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 22.dp, top = 6.dp, bottom = 14.dp, end = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        apps.forEach { app ->
+                            androidx.compose.runtime.key(app.packageName) {
+                                Surface(
+                                    shape = RoundedCornerShape(50),
+                                    color = Color.Transparent,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, AmbientTheme.palette.accentHalo.copy(alpha = 0.3f)),
+                                    modifier = Modifier.combinedClickable(
+                                        onClick = { onAppClick(app) },
+                                        onLongClick = { onAppLongClick(app) }
+                                    )
+                                ) {
+                                    Text(
+                                        text = app.label,
+                                        style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Normal),
+                                        color = AmbientTheme.palette.textPrimary,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
