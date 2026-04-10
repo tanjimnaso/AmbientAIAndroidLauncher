@@ -443,7 +443,7 @@ private fun getSeasonColor(season: String): Color {
 }
 
 private fun getWeekOfYear(date: LocalDate): Int {
-    return java.time.temporal.WeekFields.ISO.weekOfYear.getFrom(date)
+    return java.time.temporal.WeekFields.ISO.weekOfYear().getFrom(date).toInt()
 }
 
 private fun calculateLifeProgress(): LifeProgress {

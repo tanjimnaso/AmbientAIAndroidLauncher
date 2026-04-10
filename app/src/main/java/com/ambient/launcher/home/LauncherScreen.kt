@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.lazy.LazyColumn
@@ -79,6 +80,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
 import com.ambient.launcher.AgenticAIViewModel
@@ -122,6 +124,7 @@ fun LauncherScreen(
     val installedApps by dashboardViewModel.installedApps.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
+    var isTodoOpen by remember { mutableStateOf(false) }
     var editingApp: AppInfo? by remember { mutableStateOf(null) }
     var editingToday by remember { mutableStateOf(false) }
     var renamingBucket: LauncherBucket? by remember { mutableStateOf(null) }
@@ -267,9 +270,7 @@ fun LauncherScreen(
                 isOpen = isTodoOpen,
                 onDismiss = { isTodoOpen = false }
             )
-                    )
-                )
-        )
+        }
 
         HorizontalPager(
             state = pagerState,
@@ -360,7 +361,8 @@ fun LauncherScreen(
                         context.packageManager.getLaunchIntentForPackage(app.packageName)
                             ?.let(context::startActivity)
                     },
-                    onAppLongClick = { app -> editingApp = app }
+                    onAppLongClick = { app -> editingApp = app },
+                    onOpenTodo = { isTodoOpen = true }
                 )
             }
         }
@@ -626,10 +628,10 @@ private fun HomePage(
     onCalendarGestureChanged: (Boolean) -> Unit,
     onAiSend: (String) -> Unit,
     onAppClick: (AppInfo) -> Unit,
-    onAppLongClick: (AppInfo) -> Unit
+    onAppLongClick: (AppInfo) -> Unit,
+    onOpenTodo: () -> Unit
 ) {
     var aiQuery by remember { mutableStateOf("") }
-    var isTodoOpen by remember { mutableStateOf(false) }
 
     LazyColumn(
         state = listState,
@@ -659,6 +661,12 @@ private fun HomePage(
         item { Spacer(modifier = Modifier.height(40.dp)) }
 
         item {
+            StateLayerDashboard()
+        }
+
+        item { Spacer(modifier = Modifier.height(40.dp)) }
+
+        item {
             TodayInfoCard(
                 feedItems = feedItems,
                 briefing = briefing,
@@ -682,7 +690,7 @@ private fun HomePage(
                     "Update Today styling",
                     "Refactor ProjectCard"
                 ),
-                onClick = { isTodoOpen = true }
+                onClick = onOpenTodo
             )
         }
 
@@ -921,7 +929,7 @@ private fun IndustrialIndexPage(
                     Spacer(modifier = Modifier.weight(1f))
                     IconButton(onClick = { isReorderingMode = !isReorderingMode }) {
                         Icon(
-                            painter = androidx.compose.material.icons.Icons.Default.MoreVert,
+                            imageVector = Icons.Default.MoreVert,
                             contentDescription = if (isReorderingMode) "Exit reordering" else "Reorder sections",
                             tint = if (isReorderingMode) AmbientTheme.palette.accentHigh else AmbientTheme.palette.textPrimary
                         )
@@ -1151,12 +1159,12 @@ private fun IndustrialStandaloneRow(
     isHidden: Boolean,
     onToggleVisibility: (() -> Unit)?,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     onRemove: (() -> Unit)? = null,
     onRename: (() -> Unit)? = null,
     isCollapsed: Boolean = false,
     onToggleCollapse: (() -> Unit)? = null,
-    showReorderHandle: Boolean = false,
-    modifier: Modifier = Modifier
+    showReorderHandle: Boolean = false
 ) {
     Row(
         modifier = modifier
@@ -1167,7 +1175,7 @@ private fun IndustrialStandaloneRow(
     ) {
         if (showReorderHandle) {
             Icon(
-                painter = androidx.compose.material.icons.Icons.Default.DragHandle,
+                imageVector = Icons.Default.DragHandle,
                 contentDescription = "Drag to reorder",
                 tint = AmbientTheme.palette.textSecondary,
                 modifier = Modifier.size(20.dp)
