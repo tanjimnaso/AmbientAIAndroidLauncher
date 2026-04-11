@@ -647,24 +647,16 @@ private fun HomePage(
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
         item {
-            HomeHeader(
-                weather = weather
-            )
-        }
-
-        item { Spacer(modifier = Modifier.height(32.dp)) }
-
-        item {
             TimeHorizonDashboard()
         }
 
-        item { Spacer(modifier = Modifier.height(40.dp)) }
+        item { Spacer(modifier = Modifier.height(24.dp)) }
 
         item {
-            StateLayerDashboard()
+            CompactTodayHeader(weather = weather)
         }
 
-        item { Spacer(modifier = Modifier.height(40.dp)) }
+        item { Spacer(modifier = Modifier.height(24.dp)) }
 
         item {
             TodayInfoCard(
@@ -719,20 +711,6 @@ private fun HomePage(
 
         item {
             CalendarPreviewStrip(onCalendarGestureChanged = onCalendarGestureChanged)
-        }
-
-        item { Spacer(modifier = Modifier.height(16.dp)) }
-
-        item {
-            val allHomeApps = visibleBuckets.flatMap { bucket -> bucketApps[bucket].orEmpty() }
-            if (allHomeApps.isNotEmpty()) {
-                BentoTileGrid(
-                    apps = allHomeApps,
-                    tileSizes = tileSizes,
-                    onAppClick = onAppClick,
-                    onAppLongClick = onAppLongClick
-                )
-            }
         }
 
         item { Spacer(modifier = Modifier.height(24.dp)) }

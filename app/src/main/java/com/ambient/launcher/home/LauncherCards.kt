@@ -75,8 +75,8 @@ import java.time.format.DateTimeFormatter
 
 
 
-private val HeaderInk = Color(0xFFF4F2EC)
-private val HeaderSubtleInk = Color(0xD8F4F2EC)
+// Removed hardcoded inks, now using AmbientTheme.palette in HomeHeader
+
 
 @Composable
 internal fun HomeHeader(
@@ -86,6 +86,9 @@ internal fun HomeHeader(
     val dayFormatter = remember { DateTimeFormatter.ofPattern("EEEE") }
     val dateFormatter = remember { DateTimeFormatter.ofPattern("MMMM d, yyyy") }
     val timeFormatter = remember { DateTimeFormatter.ofPattern("h:mma") }
+    
+    val headerInk = AmbientTheme.palette.textPrimary
+    val headerSubtleInk = AmbientTheme.palette.textSecondary
 
     Column(
         modifier = Modifier
@@ -105,13 +108,13 @@ internal fun HomeHeader(
                         lineHeight = 44.sp,
                         letterSpacing = (-1.0).sp
                     ),
-                    color = HeaderInk
+                    color = headerInk
                 )
                 Text(
                     text = now.format(dateFormatter),
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.Normal,
-                        color = HeaderSubtleInk
+                        color = headerSubtleInk
                     )
                 )
             }
@@ -120,12 +123,12 @@ internal fun HomeHeader(
                 Text(
                     text = weather.temperatureText.ifBlank { "--°" },
                     style = MaterialTheme.typography.headlineMedium.copy(fontSize = 32.sp),
-                    color = HeaderInk
+                    color = headerInk
                 )
                 Text(
                     text = now.format(timeFormatter).lowercase(),
                     style = MaterialTheme.typography.bodySmall,
-                    color = HeaderSubtleInk
+                    color = headerSubtleInk
                 )
             }
         }
@@ -437,7 +440,7 @@ internal fun CalendarPreviewStrip(
                     fontWeight = if (isToday) FontWeight.SemiBold else FontWeight.Medium,
                     letterSpacing = 1.sp
                 ),
-                color = if (isToday) HeaderInk else HeaderSubtleInk
+                color = if (isToday) AmbientTheme.palette.textPrimary else AmbientTheme.palette.textSecondary
             )
         }
     }
