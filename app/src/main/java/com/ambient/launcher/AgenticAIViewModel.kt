@@ -8,12 +8,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
-import java.util.concurrent.TimeUnit
 
 data class ChatMessage(
     val id: String = java.util.UUID.randomUUID().toString(),
@@ -22,9 +20,7 @@ data class ChatMessage(
 )
 
 class AgenticAIViewModel : ViewModel() {
-    private val client = OkHttpClient.Builder()
-        .callTimeout(20, TimeUnit.SECONDS)
-        .build()
+    private val client = HttpClient.instance
 
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val messages: StateFlow<List<ChatMessage>> = _messages.asStateFlow()

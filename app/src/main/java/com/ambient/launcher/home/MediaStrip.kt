@@ -35,23 +35,23 @@ internal fun MediaStrip(viewModel: MediaViewModel) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "NOW PLAYING",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
+                        style = ResponsiveTypography.t3.copy(
+                            fontWeight = FontWeight.SemiBold,
                             letterSpacing = 0.5.sp
                         ),
                         color = AmbientTheme.palette.textPrimary.copy(alpha = 0.6f)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = info.title, 
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), 
+                        text = info.title,
+                        style = ResponsiveTypography.t1,  // 20sp Inter SemiBold — track title
                         color = AmbientTheme.palette.textPrimary,
                         maxLines = 1,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                     Text(
-                        text = info.artist, 
-                        style = MaterialTheme.typography.bodySmall, 
+                        text = info.artist,
+                        style = ResponsiveTypography.t2,  // 15sp Inter Regular — artist name
                         color = AmbientTheme.palette.textSecondary,
                         maxLines = 1,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis

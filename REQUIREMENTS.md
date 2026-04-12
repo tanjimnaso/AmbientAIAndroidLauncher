@@ -71,13 +71,22 @@
   - `resetPct` = percentage at the moment the charger was disconnected.
   - Battery monitoring via `BroadcastReceiver` registered in `DashboardViewModel`, not inline
     in composables.
+  - **Interaction:** Tapping the battery readout opens the system's Battery Usage Summary screen.
 - Wallet action card: taps through to Google Wallet or the primary wallet app.
 - Both action cards are `aspectRatio(2f/3f)` — 50% taller than wide.
 - Time-based theme switching: EARLY_MORNING (5–7:30), DAY (7:30–17:30),
   BLUE_HOUR (17:30–20:00), LATE_NIGHT (20:00–5:00).
 - System wallpaper as base visual layer (`windowShowWallpaper=true`).
 
-### 6. Deferred Feature Areas
+### 6. Forecasting & Time Horizon
+- **Life & Forecast Timeline:** Visualize the user's life arc (birth to expected life years) integrated with global technological forecasts (AGI, Singularity).
+- **Universal Scale:** A secondary timeline contextualizing the human era within the cosmic scale (Big Bang to Heat Death).
+- **Forecast Observation Deck:** An interactive slide-out panel accessible by tapping the timelines.
+  - Aggregates probabilistic data from Metaculus (Community Predictions) and Manifold (Market Odds).
+  - Provides AI-generated "Reality Sync" context, translating global forecasts into personal impact.
+- **Visual Presentation:** Use clean, vertical leader lines to associate labels with timeline points. Stagger labels and use multi-line text for high-density forecast clusters.
+
+### 7. Deferred Feature Areas
 - Social/message recents are deferred to a future pass.
 - Widget hosting is deferred to a future pass.
 - Launcher-native notes and Samsung Notes integration are deferred.

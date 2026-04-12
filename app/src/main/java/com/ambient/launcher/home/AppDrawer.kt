@@ -50,11 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
-
-private val LibrarySurface = Color(0xF3ECEAE4)
-private val LibraryBorder = Color(0xB514171B)
-private val LibraryAccent = Color(0xFFD4D12A)
-private val LibraryInk = Color(0xFF101216)
+import com.ambient.launcher.ui.theme.AmbientTheme
 
 internal enum class LibraryMode {
     EDIT
@@ -84,10 +80,13 @@ internal fun LibraryOverlay(
         exit = fadeOut(),
         modifier = Modifier.fillMaxSize()
     ) {
+        val palette = AmbientTheme.palette
+        val ink = palette.textPrimary
+        val border = palette.textPrimary.copy(alpha = 0.2f)
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(LibrarySurface)
+                .background(palette.drawerBackground)
                 .imePadding()
         ) {
             Column(
@@ -103,22 +102,22 @@ internal fun LibraryOverlay(
                         Text(
                             text = "Unassigned Apps",
                             style = MaterialTheme.typography.headlineLarge,
-                            color = LibraryInk
+                            color = ink
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = "Assign one home bucket per app, or hide it.",
                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Normal),
-                            color = LibraryInk.copy(alpha = 0.78f)
+                            color = ink.copy(alpha = 0.78f)
                         )
                     }
                     FilledIconButton(
                         onClick = onDismiss,
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = Color.Transparent,
-                            contentColor = LibraryInk
+                            contentColor = ink
                         ),
-                        modifier = Modifier.border(1.dp, LibraryBorder, RoundedCornerShape(18.dp))
+                        modifier = Modifier.border(1.dp, border, RoundedCornerShape(18.dp))
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
@@ -138,25 +137,25 @@ internal fun LibraryOverlay(
                             text = "Search unassigned apps"
                         )
                     },
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = LibraryInk),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = ink),
                     singleLine = true,
                     shape = RoundedCornerShape(20.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = LibraryBorder,
-                        unfocusedBorderColor = LibraryBorder.copy(alpha = 0.65f),
-                        focusedTextColor = LibraryInk,
-                        unfocusedTextColor = LibraryInk,
-                        cursorColor = LibraryInk,
-                        focusedPlaceholderColor = LibraryInk.copy(alpha = 0.48f),
-                        unfocusedPlaceholderColor = LibraryInk.copy(alpha = 0.48f),
-                        focusedLeadingIconColor = LibraryInk,
-                        unfocusedLeadingIconColor = LibraryInk.copy(alpha = 0.7f)
+                        focusedBorderColor = border,
+                        unfocusedBorderColor = border.copy(alpha = 0.65f),
+                        focusedTextColor = ink,
+                        unfocusedTextColor = ink,
+                        cursorColor = ink,
+                        focusedPlaceholderColor = ink.copy(alpha = 0.48f),
+                        unfocusedPlaceholderColor = ink.copy(alpha = 0.48f),
+                        focusedLeadingIconColor = ink,
+                        unfocusedLeadingIconColor = ink.copy(alpha = 0.7f)
                     ),
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = null,
-                            tint = LibraryInk
+                            tint = ink
                         )
                     }
                 )
@@ -204,17 +203,18 @@ private fun OutlineFilterChip(
     selected: Boolean,
     onClick: () -> Unit
 ) {
+    val palette = AmbientTheme.palette
     Surface(
-        color = if (selected) LibraryAccent else Color.Transparent,
+        color = if (selected) palette.accentHigh.copy(alpha = 0.2f) else Color.Transparent,
         shape = RoundedCornerShape(50),
-        border = androidx.compose.foundation.BorderStroke(1.dp, LibraryBorder),
+        border = androidx.compose.foundation.BorderStroke(1.dp, palette.textPrimary.copy(alpha = 0.2f)),
         modifier = Modifier.clickable(onClick = onClick)
     ) {
         Text(
             text = label,
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Normal),
-            color = LibraryInk
+            color = palette.textPrimary
         )
     }
 }
@@ -245,13 +245,14 @@ private fun AppLibraryRowShell(
     onClick: () -> Unit,
     trailing: @Composable () -> Unit
 ) {
+    val palette = AmbientTheme.palette
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         color = Color.Transparent,
         shape = RoundedCornerShape(20.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, LibraryBorder)
+        border = androidx.compose.foundation.BorderStroke(1.dp, palette.textPrimary.copy(alpha = 0.2f))
     ) {
         Row(
             modifier = Modifier
@@ -261,13 +262,13 @@ private fun AppLibraryRowShell(
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             val iconBitmap = rememberAppIcon(packageName = app.packageName)
-            Box(modifier = Modifier.size(48.dp)) {
+            Box(modifier = Modifier.size(64.dp)) {
                 iconBitmap?.let {
                     Image(
                         bitmap = it,
                         contentDescription = app.label,
                         modifier = Modifier
-                            .size(48.dp)
+                            .size(64.dp)
                             .clip(RoundedCornerShape(16.dp))
                     )
                 }
@@ -276,14 +277,14 @@ private fun AppLibraryRowShell(
                 Text(
                     text = app.label,
                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Normal),
-                    color = LibraryInk,
+                    color = palette.textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = app.packageName,
                     style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Normal),
-                    color = LibraryInk.copy(alpha = 0.62f),
+                    color = palette.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

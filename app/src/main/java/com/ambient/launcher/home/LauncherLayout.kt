@@ -16,9 +16,10 @@ import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 
-data class AppInfo(
+internal data class AppInfo(
     val label: String,
-    val packageName: String
+    val packageName: String,
+    val bucket: LauncherBucket = LauncherBucket.MISC
 )
 
 private val iconCache = LruCache<String, ImageBitmap>(150)
@@ -43,34 +44,67 @@ fun rememberAppIcon(packageName: String): ImageBitmap? {
     }.value
 }
 
+/**
+ * LauncherLayout: Design System for Slab Phones (360–480dp)
+ *
+ * Baseline: 480p power-user narrow mode. All measurements are DPI-aware (dp).
+ * Typography: See ResponsiveTypography.kt (5-tier hierarchy: D1, H1, D2, T1, T2, T3).
+ * Spacing: 8dp base grid. All multiples follow: 4, 8, 16, 32, 48, 64.
+ *
+ * This system adapts to user accessibility settings (Configuration.fontScale) automatically
+ * via Compose's sp unit behavior. Components should use ResponsiveTypography for all text.
+ */
 internal object LauncherLayout {
-    val edgeBleed = 18.dp
-    val contentPadding = 0.dp
+
+    // ── Content Inset & Padding (480p baseline) ─────────────────────────────
+    val edgeBleed = 18.dp           // Horizontal bleed for full-width elements
+    val contentPadding = 0.dp        // Standard inner padding (adjust per section)
     val topPadding = 0.dp
-    val largeGap = 24.dp
-    val mediumGap = 16.dp
-    val smallGap = 10.dp
-    val tileGap = 2.dp
-    val cardRadius = 0.dp
+    val sectionHorizontalPadding = 24.dp  // Horizontal padding for content sections
+
+    // ── Gap System (8dp base grid: 8, 16, 24, 32, 48, 64) ──────────────────
+    // Use these for spacing between elements, NOT within text
+    val smallGap = 10.dp             // Minor spacing between items
+    val mediumGap = 16.dp            // Standard spacing between sections
+    val largeGap = 24.dp             // Generous spacing, section boundaries
+    val spacingXS = 4.dp
+    val spacingS = 8.dp
+    val spacingM = 16.dp
+    val spacingL = 32.dp             // Breathing room between major sections
+    val spacingXL = 48.dp            // Large vertical separator (between Level 0 & Level 2)
+    val spacingXXL = 64.dp           // Maximum breathing room
+    val tileGap = 8.dp
+
+    // ── Shape & Radius ───────────────────────────────────────────────────────
+    val cardRadius = 0.dp            // Flat cards (no border radius)
     val sectionCardRadius = 0.dp
-    val tileRadius = 0.dp
-    val heroTileRadius = 0.dp
+    val tileRadius = 16.dp           // App tile corner radius
+    val heroTileRadius = 24.dp       // Large tile corner radius
     val chipRadius = 0.dp
+
+    // ── Component Sizing (for 480p baseline) ──────────────────────────────────
     val pinnedItemWidth = 72.dp
-    val pinnedIconSize = 46.dp
+    val pinnedIconSize = 61.dp
     val browserCardMinSize = 232.dp
-    val appTileSize = 34.dp
-    val appTileWidth = 92.dp
-    val appTileHeight = 92.dp
-    val wideTileWidth = 220.dp
-    val wideTileHeight = 108.dp
-    val largeTileWidth = 220.dp
-    val largeTileHeight = 220.dp
-    val compactTileWidth = 108.dp
-    val compactTileHeight = 108.dp
+    val appTileSize = 45.dp
+    val appTileWidth = 122.dp
+    val appTileHeight = 122.dp
+    val wideTileWidth = 293.dp
+    val wideTileHeight = 144.dp
+    val largeTileWidth = 293.dp
+    val largeTileHeight = 293.dp
+    val compactTileWidth = 144.dp
+    val compactTileHeight = 144.dp
     val iconBadgeSize = 44.dp
+
+    // ── Industrial Index (left-swipe page) ────────────────────────────────────
     val industrialInset = 26.dp
     val industrialLineWidth = 1.dp
+
+    // ── Typography Reference ──────────────────────────────────────────────────
+    // Import ResponsiveTypography for all text styles. This is a design system reference.
+    // Do NOT hardcode font sizes in components — always use ResponsiveTypography.
+    // Example: Text("Headlines", style = ResponsiveTypography.d1, color = ...)
 }
 
 internal fun Modifier.horizontalBleed(amount: Dp): Modifier = layout { measurable, constraints ->

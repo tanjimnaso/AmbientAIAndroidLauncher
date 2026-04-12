@@ -9,6 +9,9 @@
     <!-- Internet permission for AI API and RSS fetching -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.SET_WALLPAPER" />
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <application
         android:allowBackup="true"
@@ -28,6 +31,7 @@
             android:launchMode="singleTask"
             android:clearTaskOnLaunch="true"
             android:stateNotNeeded="true"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.AmbientAIAndroidLauncher">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

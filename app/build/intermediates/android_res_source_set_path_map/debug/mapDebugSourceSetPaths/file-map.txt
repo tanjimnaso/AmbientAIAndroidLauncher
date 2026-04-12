@@ -1,6 +1,0 @@
-com.ambient.launcher.app-updated_navigation_xml-0 /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/build/generated/updated_navigation_xml/debug
-com.ambient.launcher.app-packageDebugResources-1 /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/build/intermediates/incremental/debug/packageDebugResources/merged.dir
-com.ambient.launcher.app-packageDebugResources-2 /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/build/intermediates/incremental/debug/packageDebugResources/stripped.dir
-com.ambient.launcher.app-debug-3 /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/build/intermediates/merged_res/debug/mergeDebugResources
-com.ambient.launcher.app-debug-4 /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/debug/res
-com.ambient.launcher.app-main-5 /Users/tanjimislam/AndroidStudioProjects/AmbientAIAndroidLauncher/app/src/main/res

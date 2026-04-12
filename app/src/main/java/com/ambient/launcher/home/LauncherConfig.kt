@@ -8,6 +8,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
+import com.ambient.launcher.defaultFeedSources
+import com.ambient.launcher.ui.theme.AmbientPalette
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -55,6 +58,18 @@ internal enum class LauncherBucket(
     }
 }
 
+internal fun LauncherBucket.themeColor(palette: AmbientPalette): Color {
+    return when (this) {
+        LauncherBucket.NEWS, LauncherBucket.BROWSERS -> palette.clusterIntelligence
+        LauncherBucket.AI -> palette.clusterAssistant
+        LauncherBucket.SOCIAL, LauncherBucket.DATING -> palette.clusterCommunication
+        LauncherBucket.HEALTH -> palette.clusterHealth
+        LauncherBucket.SECURITY, LauncherBucket.WALLET, LauncherBucket.UTILITIES -> palette.clusterUtility
+        LauncherBucket.TOOLS, LauncherBucket.SMART_HOME, LauncherBucket.HARDWARE, LauncherBucket.TRANSPORT_DELIVERY -> palette.clusterAction
+        else -> palette.textSecondary
+    }
+}
+
 // ── Configuration model ──────────────────────────────────────────────────────
 
 internal data class LauncherConfiguration(
@@ -72,11 +87,7 @@ internal data class LauncherConfiguration(
     val homePackages: Set<String> = emptySet(),
     val tileSizes: Map<String, TileSize> = emptyMap(),
     val briefingInstruction: String = "Summarize these headlines into a single short, professional 'Vibe' or briefing sentence for a workstation home screen:",
-    val rssSources: List<Pair<String, String>> = listOf(
-        "Financial Times: Markets" to "https://www.ft.com/markets?format=rss",
-        "Financial Times: Comment" to "https://www.ft.com/comment?format=rss",
-        "ABC News" to "https://www.abc.net.au/news/feed/51120/rss.xml"
-    )
+    val rssSources: List<Pair<String, String>> = defaultFeedSources.map { it.name to it.url }
 ) {
     fun packagesFor(bucket: LauncherBucket): List<String> = assignments[bucket].orEmpty()
 
@@ -345,11 +356,7 @@ internal object LauncherConfigStore {
                 val config = LauncherConfiguration(
                     assignments, hiddenBuckets, collapsedBuckets, bucketOrder, customTitles, homePackages, tileSizes,
                     briefingInstruction = briefingInstruction ?: "Summarize these headlines into a single short, professional 'Vibe' or briefing sentence for a workstation home screen:",
-                    rssSources = rssSources ?: listOf(
-                        "Financial Times: Markets" to "https://www.ft.com/markets?format=rss",
-                        "Financial Times: Comment" to "https://www.ft.com/comment?format=rss",
-                        "ABC News" to "https://www.abc.net.au/news/feed/51120/rss.xml"
-                    )
+                    rssSources = rssSources ?: defaultFeedSources.map { it.name to it.url }
                 )
                 if (LauncherBucket.entries.all { config.packagesFor(it).isEmpty() }) {
                     reseedWith(installedApps, hiddenBuckets, hiddenJson, collapsedBuckets, collapsedJson, bucketOrder, orderJson, customTitles, titlesJson, homePackages, homeJson, tileSizes, tileSizesJson, briefingInstruction, rssSources)
@@ -384,7 +391,7 @@ internal object LauncherConfigStore {
             homePackages = if (!homeJson.isNullOrBlank()) homePackages else seeded.homePackages,
             tileSizes = if (!tileSizesJson.isNullOrBlank()) tileSizes else seeded.tileSizes,
             briefingInstruction = briefingInstruction ?: seeded.briefingInstruction,
-            rssSources = rssSources ?: seeded.rssSources
+            rssSources = rssSources ?: defaultFeedSources.map { it.name to it.url }
         )
     }
 

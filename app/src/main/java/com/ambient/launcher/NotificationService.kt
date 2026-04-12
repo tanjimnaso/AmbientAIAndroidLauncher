@@ -45,7 +45,7 @@ class NotificationService : NotificationListenerService() {
 object ReadingServiceBus {
     private var listener: ((ReadingState?) -> Unit)? = null
 
-    fun setListener(l: (ReadingState?) -> Unit) {
+    fun setListener(l: ((ReadingState?) -> Unit)?) {
         listener = l
     }
 

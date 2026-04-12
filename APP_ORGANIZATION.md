@@ -1,6 +1,8 @@
-# App Organization Snapshot
+# App Organization: Current → Final
 
-## 01. News
+## YOUR CURRENT ORGANIZATION (from screenshots)
+
+### 01. News
 - AP News
 - Ground News
 - Reuters
@@ -8,14 +10,14 @@
 - FT
 - Spotify
 
-## 02. Browsers
+### 02. Browsers
 - Chrome
 - Perlego
 - Audible
 - Brave
 - Browser Beta
 
-## 03. AI
+### 03. AI
 - ChatGPT
 - Claude
 - Gemini
@@ -27,12 +29,12 @@
 - Kimi
 - Manus
 
-## 04. Social
+### 04. Social
 - Messenger
 - Photos
 - WhatsApp
 
-## 05. Health
+### 05. Health
 - Runna
 - Cyclers
 - MedAdvisor
@@ -43,7 +45,7 @@
 - Strava
 - SwimUp
 
-## 06. Security
+### 06. Security
 - Authenticator (×2)
 - GitHub
 - Google Cloud
@@ -52,11 +54,11 @@
 - Service NSW
 - myGov Code Generator
 
-## 07. Wallet
+### 07. Wallet
 - CommBank
 - ING Banking
 
-## 08. Utilities
+### 08. Utilities
 - Gmail
 - Amazon Shopping
 - Calendar
@@ -69,89 +71,207 @@
 - Wallet
 - Lightroom
 
-## 09. Unassigned Apps (50+)
-- ABP for Samsung Internet
-- AccuBattery
-- AdBlock for Samsung Internet
-- AdGuard
-- BetterCam
-- Bumble
-- Calculator
-- Calendar
-- Camera
-- Camera Assistant
-- Coffee Meets Bagel
-- Connect
-- Consultant
-- Contacts
-- DevCheck
-- DiDi
-- Display Assistant
-- DoorDash
-- Drive
-- Edge Gallery
-- Edge Touch
-- Feeld
-- Gallery
-- Good Lock
-- Google
-- Health
-- Hinge
-- Inoreader
-- Members
-- Messages
-- My Boost Mobile
-- My Files
-- Nice Catch
-- Notes
-- One Hand Operation +
-- Opal Travel
-- Phone
-- Play Store
-- Reading mode
-- Settings
-- Skymee
-- Smart Switch
-- Smart Tutor
-- Sound Assistant
-- Store
-- Tapo
-- Theme Park
-- Tinder
-- Tips
-- Translate
-- Uber Eats
-- Voice Recorder
-- Wallet
-- Waze
-- Xiaomi Home
+### 09. Unassigned (50+ apps)
+*See below for reorganization*
 
 ---
 
-## What I Notice About Your Organization
+## YOUR CLARIFICATIONS
 
-**Pattern 1: Intentional Minimalism**
-You have ~40 actively organized apps across 8 categories, but 50+ unassigned. This suggests you curate what matters and defer the rest—a "working set" vs. "available" distinction.
+**Apps to move/update:**
+- **Garmin Connect** → Health bucket (fitness tracking)
+- **Consultant** → AI bucket (your agentic AI system in development)
+- **Samsung Wallet** → keep in Wallet bucket
+- **Google Wallet** → move to System & Bloat (bloatware)
+- **My Boost** → keep in Transport & Delivery (SIM provider/carrier)
+- **Nice Catch** → System & Bloat (Samsung bloat)
+- **Smart Tutor** → System & Bloat (Samsung bloat)
+- **Google Calendar** → move to System & Bloat (duplicate, use Samsung)
+- **Google Phone** → move to System & Bloat (duplicate, use Samsung)
 
-**Pattern 2: Interest-Driven Curation**
-- **Heavy on AI** (10 apps: Claude, ChatGPT, Gemini, Perplexity, DeepSeek, etc.) — you're actively exploring AI tools
-- **Fitness/Health obsession** (9 apps: Strava, MyFitnessPal, Nike Run Club, MedAdvisor, etc.) — quantified self mindset
-- **News/information** intentionally grouped — you consume multiple perspectives (Reuters, AP, Ground News, FT)
-- **Security-conscious** (2× authenticators, GitHub, Google Cloud, Service NSW) — treating auth as a first-class category
+---
 
-**Pattern 3: The "Utilities Sink"**
-Your Utilities section is a catch-all (Gmail, Wikipedia, Maps, Lightroom, TripView) — it's where things go when they don't fit. Lightroom especially stands out (creative tool, not utility).
+## FINAL RECOMMENDED ORGANIZATION
 
-**Pattern 4: Incomplete Organization**
-The massive "Unassigned Apps" section reveals the cost of lazy categorization—Tinder, Bumble, Hinge are social but unassigned; duplicate Calendar/Phone apps; system bloat (Samsung Internet tools, Device Maintenance apps). You started organizing, then stopped.
+### 01. News ✓
+- AP News
+- Ground News
+- Reuters
+- X
+- FT
+- Spotify
 
-**Pattern 5: Regional/Local Specificity**
-- CommBank + ING (Australian banks)
-- Service NSW, myGov
-- MedAdvisor (Australian health)
-- TripView (Sydney transport)
+### 02. Browsers ✓
+- Chrome
+- Perlego
+- Audible
+- Brave
+- Browser Beta
 
-This is a Sydney-based setup.
+### 03. AI ✓ (+ addition)
+- ChatGPT
+- Claude
+- Gemini
+- Perplexity
+- AI Studio
+- DeepSeek
+- Qwen Chat
+- Grok
+- Kimi
+- Manus
+- **Consultant** (your agentic AI)
 
-**The Meta-Pattern:**
-You organize apps by *intention* (News = daily read, Health = daily tracker, AI = exploration), not by system category. But the unassigned bucket suggests you're at a decision point—either accept the "assign once, use forever" friction, or embrace a flatter, search-based paradigm.
+### 04. Social ✓
+- Messenger
+- Photos
+- WhatsApp
+
+### 05. Health ✓ (+ addition)
+- Runna
+- Cyclers
+- MedAdvisor
+- Training
+- Tracker
+- MyFitnessPal
+- Nike Run Club
+- Strava
+- SwimUp
+- **Garmin Connect**
+
+### 06. Security ✓
+- Authenticator (×2)
+- GitHub
+- Google Cloud
+- Medicare
+- myID
+- Service NSW
+- myGov Code Generator
+
+### 07. Wallet ✓
+- CommBank
+- ING Banking
+- Samsung Wallet
+
+### 08. Utilities ✓ (cleaned)
+- Gmail
+- Amazon Shopping
+- Samsung Calendar
+- Clock
+- Wikipedia
+- Maps
+- Samsung Messages
+- Samsung Phone
+- TripView
+- Lightroom
+
+### 09. Tools (NEW — Quick productivity)
+- My Files
+- Calculator
+- Notes
+- Play Store
+- Tapo
+- Xiaomi Home
+- Voice Recorder
+- Translate
+- Inoreader
+
+### 10. Smart Home (NEW — IoT/Device control)
+- Tapo
+- Xiaomi Home
+
+### 11. Hardware & Device (NEW — Performance/control)
+- AccuBattery
+- AdGuard
+- BetterCam
+- Camera Assistant
+- DevCheck
+- Display Assistant
+- One Hand Operation +
+
+### 12. Transport & Delivery (NEW — Getting around)
+- Waze
+- Uber Eats
+- DoorDash
+- Opal Travel
+- DiDi
+- **My Boost** (SIM provider)
+
+### 13. Dating (NEW — Low priority, occasional)
+- Tinder
+- Bumble
+- Hinge
+- Feeld
+- Coffee Meets Bagel
+
+### 14. System & Bloat (NEW — OS clutter, rarely opened)
+- ABP for Samsung Internet
+- AdBlock for Samsung Internet
+- Edge Gallery
+- Edge Touch
+- Good Lock
+- Google (search app)
+- **Google Wallet** (bloatware duplicate)
+- **Google Calendar** (duplicate)
+- **Google Phone** (duplicate)
+- Reading mode
+- Smart Switch
+- Sound Assistant
+- **Smart Tutor** (Samsung bloat)
+- Theme Park
+- Tips
+- **Nice Catch** (Samsung bloat)
+
+### 15. Misc/Unknown (NEW — Singles, unclear purpose)
+- Connect (?)
+- Consultant (moved to AI)
+- Gallery (system)
+- Health (Samsung Health duplicate?)
+- Skymee (video chat)
+- Store (Samsung Store)
+- Camera (system duplicate)
+- Members (?)
+
+---
+
+## APP MENU UI RECOMMENDATIONS
+
+### Current state:
+- "+" button to add groups → ✓ Keep
+- Need: Hamburger (≡) icon for reordering groups
+
+### Suggested layout:
+```
+Today Settings                                    [+] [≡]
+
+01 News
+   [AP News] [Ground News] [Reuters] [X] [FT] [Spotify]
+
+02 Browsers
+   [Chrome] [Perlego] [Audible] [Brave] [Browser Beta]
+
+[collapsed] 03 AI (10 apps)
+[collapsed] 04 Social (3 apps)
+...
+```
+
+### Interaction patterns:
+1. **Tap bucket number or title** → expand/collapse (hide low-frequency buckets like System & Bloat, Misc)
+2. **Long-press bucket title** → rename or settings
+3. **Hamburger (≡)** → drag-to-reorder mode (drag bucket handle to reorder)
+4. **"+" button** → add new bucket with naming dialog
+
+### Recommended default collapse state:
+- **Open**: News, Browsers, AI, Health, Wallet, Utilities, Tools, Security
+- **Closed**: Transport & Delivery, Dating, System & Bloat, Misc, Hardware (you know what they are, don't need to scan)
+
+This keeps your frequently-accessed buckets visible and collapsible sections for "I know what I'm looking for."
+
+---
+
+## Summary of changes:
+- **Moved 6 apps** out of Unassigned
+- **Created 6 new buckets** for cleaner navigation
+- **Collapsed System & Bloat** to hide OS clutter
+- **Restored Garmin Connect** to Health
+- **Added Consultant** to AI (your project)
+- **Deduplicated** Wallet, Calendar, Phone, Messages (removed Google versions)

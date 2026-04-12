@@ -66,20 +66,79 @@
 
 ### 4. Data Layers
 - **`DashboardViewModel`**
-  - RSS Aggregator Service: Fetches multi-source news (Chatham House, FT, etc.).
-  - Perspective Engine: Applies lenses (Career, Sydney, Global, Contrarian) to processed headlines.
-  - Weather, Battery, App list.
+  - RSS Aggregator: Fetches 9 curated sources in parallel (OkHttp, 10s timeout, browser UA).
+  - Weather: Open-Meteo API, coarse location, 30-minute refresh cycle.
+  - Battery: `BroadcastReceiver` on `ACTION_BATTERY_CHANGED`, models discharge as linear from unplug point.
+  - App list: `LauncherApps`, sorted by `UsageStatsManager` (7-day window) if permission granted.
+- **`BriefingViewModel`**
+  - **Ambient Signal** (Flash, fast): Consumes `feedItems`, calls `BuildConfig.GEMINI_MODEL` (Flash), generates a single editorial sentence. 4-hour TTL cache, hash-based dedup skips redundant calls.
+  - **Deep Analysis** (Pro, on demand): Separate `generateAnalysis(briefingText)` method targeting `gemini-2.0-pro-exp`. Returns a structured 5-part response (Systemic Explanation, Historical Parallel, Literature/Philosophy, Tech & Economic Analysis, Probabilistic Forecasts). 24-hour cache keyed by briefing text hash.
+  - Both share the same OkHttp client and response-parsing path.
 - **`AgenticAIViewModel`**
-  - Gemini-backed persona engine. 
-  - Perspective-aware querying: Wraps user intent in Lens-specific system prompts.
-  - Deep Link Generator: Bridges "Ambient" summary-scan to "Deep Dive" Gemini App sessions via custom URI intents.
+  - Gemini-backed assistant wired to the briefing tap action.
+  - On tap, builds a structured 5-part analysis prompt and sends it directly to the Gemini app via `ACTION_SEND`. Falls back to launching Gemini, then browser search.
 
 ---
 
-### 5. News Engine (Multi-Perspective Cognition)
-- News is no longer a static feed. It is passed through a **Perspective Router** to provide personalized career/local/global insights.
-- Feedback loop utilizes `FeedbackTable` (Room DB) to store ratings, which are injected as "Few-Shot" context into future AI interactions.
-- Remote configuration synced via Google Drive to allow seamless profile/prompt management.
+### 5. RSS Pipeline
+
+The feed pipeline runs entirely without an LLM and has five sequential stages:
+
+```
+Parallel fetch (9 sources, 8 items/source)
+  → FeedFilter       — drops sports, personal opinion columns, and clickbait patterns
+  → 48-hour gate     — drops articles older than 48h or with unparseable dates (epoch = 0L)
+  → sort newest-first
+  → FeedDeduplicator — Jaccard title similarity ≥ 0.40 collapses same-story clusters; newest wins
+  → distinctBy URL   — safety net for exact duplicate links
+  → take(30)
+```
+
+**Sources** (defined in `defaultFeedSources`, overridable via SharedPrefs `rss_sources_v2`):
+| Source | Category |
+|---|---|
+| Associated Press | World / wire |
+| Reuters | World / wire |
+| BBC World | World |
+| BBC Technology | Technology |
+| The Guardian World | World |
+| NPR News | Politics / US |
+| Politico | Politics |
+| Ars Technica | Technology / Science |
+| Hacker News (hnrss.org) | Technology / community |
+
+**Key implementation details:**
+- `parseEpochMillis()` returns `0L` on failure (not `System.currentTimeMillis()`). Articles with `0L` are excluded by the freshness gate — this prevents articles with malformed dates from floating to the top of the feed.
+- `FeedFilter` checks against three blocklists: sports league/competition terms, opinion column prefixes (`"opinion:"`, `"why i "`, etc.), and clickbait regex patterns. Blocklists are intentionally narrow to avoid false positives.
+- `FeedDeduplicator` fingerprints each title by removing stop-words and punctuation, then computes pairwise Jaccard similarity. The input is already sorted newest-first so the cluster head is always the most recent version of a story.
+- Per-source cap is 8 items so no single outlet can dominate the 30-item feed.
+
+---
+
+### 6. Analysis Screen
+
+Tapping the ambient Signal on the home screen opens an in-app `AnalysisScreen` — a full-screen reading view that calls Gemini Pro and renders the structured analysis without leaving the launcher.
+
+**Flow:**
+```
+tap Signal
+  → AnalysisScreen (loading spinner)
+  → BriefingViewModel.generateAnalysis(briefingText)
+     → cache hit? → render immediately
+     → cache miss → Gemini Pro API call (~3-5s)
+  → LazyColumn reading view (same structure as ArticleViewerScreen)
+  → back / swipe-right → dismiss
+```
+
+**Key differences from ArticleViewerScreen:**
+- Content source is Gemini Pro API, not HTML fetch + Jsoup parse
+- Input is the current briefing sentence (already in state)
+- Sections rendered as labeled blocks (SYSTEMIC · HISTORICAL · PHILOSOPHY · ECONOMIC · FORECAST)
+- 24h cache stored in `briefing_cache` SharedPrefs under key `last_analysis`
+
+**Model selection:**
+- Ambient Signal: `BuildConfig.GEMINI_MODEL` (Flash — speed matters)  
+- Deep Analysis: `gemini-2.0-pro-exp` (hardcoded constant — quality matters)
 
 ---
 

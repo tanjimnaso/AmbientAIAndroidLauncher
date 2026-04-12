@@ -12,6 +12,8 @@ import android.annotation.SuppressLint
 import android.Manifest
 import android.content.pm.PackageManager
 import android.content.pm.LauncherApps
+import android.app.usage.UsageStatsManager
+import android.app.AppOpsManager
 import android.os.BatteryManager
 import android.os.Process
 import androidx.lifecycle.AndroidViewModel
@@ -23,7 +25,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
@@ -61,21 +64,21 @@ data class BatteryUiState(
     val isCharging: Boolean = false
 )
 
-private data class FeedSource(
+internal data class FeedSource(
     val name: String,
     val url: String
 )
 
 private fun getFeedSources(context: Context): List<FeedSource> {
-    val prefs = context.getSharedPreferences("rss_sources", Context.MODE_PRIVATE)
-    val json = prefs.getString("sources", null)
+    val prefs = context.getSharedPreferences("ambient_launcher_sections", Context.MODE_PRIVATE)
+    val json = prefs.getString("rss_sources_v2", null)
     return if (json != null) {
         runCatching {
             val array = JSONArray(json)
             buildList {
                 for (i in 0 until array.length()) {
                     val obj = array.getJSONObject(i)
-                    add(FeedSource(obj.getString("name"), obj.getString("url")))
+                    add(FeedSource(obj.getString("name"), obj.getString("url").trim()))
                 }
             }
         }.getOrDefault(defaultFeedSources)
@@ -84,62 +87,160 @@ private fun getFeedSources(context: Context): List<FeedSource> {
     }
 }
 
-private val defaultFeedSources = listOf(
-    FeedSource("AAP FactCheck", "https://www.aap.com.au/feed/"),
-    FeedSource("Associated Press", "https://feeds.ap.org/api/v2/feed/topics/headline.rss?site=apnews"),
-    FeedSource("Reuters", "https://www.reutersagency.com/feed/?feed-type=RSS&taxonomy=taxonomy&value=top-news"),
-    FeedSource("Financial Times: Markets", "https://www.ft.com/markets?format=rss"),
-    FeedSource("Financial Times: Comment", "https://www.ft.com/comment?format=rss"),
-    FeedSource("The Guardian", "https://www.theguardian.com/world/rss"),
-    FeedSource("New Scientist", "https://www.newscientist.com/feed/"),
-    FeedSource("ArchDaily", "https://www.archdaily.com/rss.xml"),
-    FeedSource("Designboom", "https://www.designboom.com/feed/"),
-    FeedSource("Dezeen", "https://www.dezeen.com/feed/"),
-    FeedSource("ABC News", "https://www.abc.net.au/news/feed/51120/rss.xml"),
-    FeedSource("Scientific American", "https://www.scientificamerican.com/feed/"),
-    FeedSource("Nature", "https://www.nature.com/nature.rss"),
+internal val defaultFeedSources = listOf(
+    // Wire services — authoritative, global, event-driven
+    FeedSource("NYT World", "https://rss.nytimes.com/services/xml/rss/nyt/World.xml"),
     FeedSource("Al Jazeera", "https://www.aljazeera.com/xml/rss/all.xml"),
-    FeedSource("TIME", "https://time.com/feed/"),
-    FeedSource("WSJ: World News", "https://feeds.a.dj.com/rss/RSSWorldNews.xml")
+    // Major broadcasters — world desk coverage
+    FeedSource("BBC World", "https://feeds.bbci.co.uk/news/world/rss.xml"),
+    FeedSource("BBC Technology", "https://feeds.bbci.co.uk/news/technology/rss.xml"),
+    FeedSource("The Guardian World", "https://www.theguardian.com/world/rss"),
+    // Politics
+    FeedSource("NPR News", "https://feeds.npr.org/1001/rss.xml"),
+    FeedSource("Politico", "https://rss.politico.com/politics-news.xml"),
+    // Tech & science
+    FeedSource("Ars Technica", "https://feeds.arstechnica.com/arstechnica/index"),
+    FeedSource("Hacker News", "https://hnrss.org/frontpage")
 )
 
-class DashboardViewModel(
+// ---------------------------------------------------------------------------
+// Feed quality filters — pure functions, no network, no LLM
+// ---------------------------------------------------------------------------
+
+private object FeedFilter {
+    // Unambiguous sports-only terminology — deliberately narrow to avoid false positives
+    private val SPORTS_TERMS = setOf(
+        "premier league", "champions league", "europa league", "conference league",
+        "la liga", "serie a", "bundesliga", "ligue 1", "mls season",
+        "super bowl", "stanley cup", "world series", "nba finals", "nfl draft",
+        "grand slam", "wimbledon", "french open", "us open tennis",
+        "formula 1", "motogp race", "nascar",
+        "cricket test", "ashes series", " odi ", " t20 ",
+        "rugby union", "rugby league", "six nations",
+        "transfer window", "transfer fee", "signed for £", "signed for $",
+        "hat-trick", "hat trick", "own goal", "penalty shootout",
+        "quarterback", "touchdown", "linebacker", "slam dunk", "home run",
+        " ufc ", "heavyweight title fight", "weigh-in"
+    )
+
+    // Opinion/personal column markers — check as title prefix or full match
+    private val OPINION_PREFIXES = listOf(
+        "opinion:", "column:", "commentary:", "my view:", "perspective:",
+        "letters:", "letter to the editor", "your letters",
+        "why i ", "my ", "i think ", "what i "
+    )
+
+    // Formulaic clickbait constructions
+    private val CLICKBAIT_PATTERNS = listOf(
+        Regex("""^\d{1,2} (things|ways|reasons|tips|signs|facts)""", RegexOption.IGNORE_CASE),
+        Regex("""^here'?s (why|what|how|everything)""", RegexOption.IGNORE_CASE),
+        Regex("""you (won'?t believe|need to know|should know)""", RegexOption.IGNORE_CASE),
+        Regex("""everything you need to know""", RegexOption.IGNORE_CASE),
+        Regex("""^(watch|photos|video|gallery):""", RegexOption.IGNORE_CASE)
+    )
+
+    fun shouldInclude(item: RssFeedItem): Boolean {
+        val lower = item.title.lowercase()
+        return SPORTS_TERMS.none { lower.contains(it) }
+            && OPINION_PREFIXES.none { lower.startsWith(it) }
+            && CLICKBAIT_PATTERNS.none { it.containsMatchIn(item.title) }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Cross-source deduplication via Jaccard title similarity — no LLM required
+// ---------------------------------------------------------------------------
+
+private object FeedDeduplicator {
+    private val STOP_WORDS = setOf(
+        "the", "a", "an", "in", "on", "at", "to", "of", "for", "with",
+        "is", "are", "was", "were", "be", "been", "has", "have", "had",
+        "will", "would", "could", "should", "that", "this", "it", "its",
+        "and", "or", "but", "not", "as", "by", "from", "after", "over",
+        "new", "says", "said", "up", "down", "out", "than", "more", "than"
+    )
+
+    private fun fingerprint(title: String): Set<String> =
+        title.lowercase()
+            .replace(Regex("[^a-z0-9 ]"), " ")
+            .split(" ")
+            .filter { it.length > 2 && it !in STOP_WORDS }
+            .toSet()
+
+    private fun jaccard(a: Set<String>, b: Set<String>): Float {
+        if (a.isEmpty() || b.isEmpty()) return 0f
+        return a.intersect(b).size.toFloat() / (a + b).size
+    }
+
+    // Input should already be sorted newest-first; the first item in each cluster wins.
+    fun deduplicate(items: List<RssFeedItem>): List<RssFeedItem> {
+        val clusters = mutableListOf<Pair<RssFeedItem, Set<String>>>()
+        for (item in items) {
+            val fp = fingerprint(item.title)
+            val isDuplicate = clusters.any { (_, clusterFp) -> jaccard(fp, clusterFp) >= 0.40f }
+            if (!isDuplicate) clusters.add(item to fp)
+        }
+        return clusters.map { it.first }
+    }
+}
+
+internal class DashboardViewModel(
     application: Application
 ) : AndroidViewModel(application) {
 
     private val appContext = application.applicationContext
     private val sharedPreferences =
         appContext.getSharedPreferences("ambient_dashboard_cache", Context.MODE_PRIVATE)
-    private val client = OkHttpClient.Builder()
-        .callTimeout(10, TimeUnit.SECONDS)
-        .build()
+    private val client = HttpClient.instance
 
     private val _feedItems = MutableStateFlow<List<RssFeedItem>>(emptyList())
     val feedItems: StateFlow<List<RssFeedItem>> = _feedItems.asStateFlow()
 
+    // Dead feed URLs → replacement mappings.  Applied once on startup to migrate saved prefs.
+    private val deadFeedReplacements = mapOf(
+        "feeds.ap.org" to ("NYT World" to "https://rss.nytimes.com/services/xml/rss/nyt/World.xml"),
+        "reutersagency.com" to ("Al Jazeera" to "https://www.aljazeera.com/xml/rss/all.xml"),
+        "feeds.reuters.com" to ("Al Jazeera" to "https://www.aljazeera.com/xml/rss/all.xml")
+    )
+
     // Seed from SharedPreferences so the first refreshFeeds() on init uses real sources.
     private var currentSources: List<Pair<String, String>> = run {
-        val prefs = appContext.getSharedPreferences("rss_sources", Context.MODE_PRIVATE)
-        val json = prefs.getString("sources", null)
+        val prefs = appContext.getSharedPreferences("ambient_launcher_sections", Context.MODE_PRIVATE)
+        val json = prefs.getString("rss_sources_v2", null)
         if (json != null) {
-            runCatching {
-                val array = org.json.JSONArray(json)
+            val parsed = runCatching {
+                val array = JSONArray(json)
                 buildList {
                     for (i in 0 until array.length()) {
                         val obj = array.getJSONObject(i)
-                        add(obj.getString("name") to obj.getString("url"))
+                        add(obj.getString("name") to obj.getString("url").trim())
                     }
                 }
             }.getOrNull()
+
+            // Migrate dead feeds in saved prefs
+            if (parsed != null) {
+                val migrated = parsed.map { (name, url) ->
+                    val replacement = deadFeedReplacements.entries.find { url.contains(it.key) }
+                    if (replacement != null) replacement.value else (name to url)
+                }
+                if (migrated != parsed) {
+                    // Persist the migration
+                    val array = JSONArray()
+                    migrated.forEach { (n, u) -> array.put(JSONObject().put("name", n).put("url", u)) }
+                    prefs.edit().putString("rss_sources_v2", array.toString()).apply()
+                }
+                migrated
+            } else null
         } else null
-    } ?: listOf(
-        "Financial Times: Markets" to "https://www.ft.com/markets?format=rss",
-        "Financial Times: Comment" to "https://www.ft.com/comment?format=rss",
-        "ABC News" to "https://www.abc.net.au/news/feed/51120/rss.xml"
-    )
+    } ?: defaultFeedSources.map { it.name to it.url }
 
     fun setRssSources(sources: List<Pair<String, String>>) {
-        if (sources == currentSources) return
+        // Prevent refresh if sources are identical (by content, not reference)
+        val sourcesChanged = sources.size != currentSources.size ||
+                sources.zip(currentSources).any { (a, b) -> a != b }
+
+        if (!sourcesChanged) return
         currentSources = sources
         refreshFeeds()
     }
@@ -221,7 +322,9 @@ class DashboardViewModel(
 
     override fun onCleared() {
         super.onCleared()
-        batteryReceiver?.let { appContext.unregisterReceiver(it) }
+        batteryReceiver?.let {
+            try { appContext.unregisterReceiver(it) } catch (_: IllegalArgumentException) { }
+        }
         batteryReceiver = null
     }
 
@@ -244,7 +347,34 @@ class DashboardViewModel(
                 }
             }
             
-            _installedApps.value = apps.distinctBy { it.packageName }.sortedBy { it.label.lowercase() }
+            // Sort by usage stats if permission is granted, otherwise alphabetical
+            val sortedApps = sortAppsByUsage(apps)
+            
+            _installedApps.value = sortedApps.distinctBy { it.packageName }
+        }
+    }
+
+    private fun sortAppsByUsage(apps: List<AppInfo>): List<AppInfo> {
+        val appOps = appContext.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+        val mode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            appOps.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), appContext.packageName)
+        } else {
+            @Suppress("DEPRECATION")
+            appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), appContext.packageName)
+        }
+
+        if (mode != AppOpsManager.MODE_ALLOWED) {
+            return apps.sortedBy { it.label.lowercase() }
+        }
+
+        val usageStatsManager = appContext.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val endTime = System.currentTimeMillis()
+        val startTime = endTime - java.util.concurrent.TimeUnit.DAYS.toMillis(7) // Last 7 days
+
+        val stats = usageStatsManager.queryAndAggregateUsageStats(startTime, endTime)
+        
+        return apps.sortedByDescending { app ->
+            stats[app.packageName]?.totalTimeInForeground ?: 0L
         }
     }
 
@@ -266,12 +396,26 @@ class DashboardViewModel(
 
     fun refreshFeeds() {
         viewModelScope.launch(Dispatchers.IO) {
-            val fetchedItems = currentSources.mapNotNull { (name, url) -> 
-                fetchLeadItem(FeedSource(name, url))
-            }.sortedByDescending { it.publishedAtEpochMillis }
+            val jobs = currentSources.map { (name, url) ->
+                async { fetchFeedItems(FeedSource(name, url.trim())) }
+            }
+
+            val cutoffMillis = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(48)
+
+            val filtered = jobs.awaitAll()
+                .asSequence()
+                .flatten()
+                .filter { it.publishedAtEpochMillis > 0L }
+                .filter { it.publishedAtEpochMillis >= cutoffMillis }
+                .filter { FeedFilter.shouldInclude(it) }
+                .sortedByDescending { it.publishedAtEpochMillis }
+                .toList()
+            // Dedup needs full list (Jaccard pairwise), so materialize first
+            val fetchedItems = FeedDeduplicator.deduplicate(filtered)
+                .distinctBy { it.url }
 
             if (fetchedItems.isNotEmpty()) {
-                val limitedItems = fetchedItems.take(3) // Show only 2-3 long reads
+                val limitedItems = fetchedItems.take(30)
                 saveCachedFeeds(limitedItems)
                 _feedItems.value = limitedItems
             }
@@ -279,35 +423,38 @@ class DashboardViewModel(
     }
 
     fun addFeedSource(name: String, url: String) {
-        val prefs = appContext.getSharedPreferences("rss_sources", Context.MODE_PRIVATE)
+        val prefs = appContext.getSharedPreferences("ambient_launcher_sections", Context.MODE_PRIVATE)
         val sources = getFeedSources(appContext).toMutableList()
-        sources.add(FeedSource(name, url))
+        sources.add(FeedSource(name, url.trim()))
         
         val array = JSONArray()
         sources.forEach { 
             array.put(JSONObject().put("name", it.name).put("url", it.url))
         }
-        prefs.edit().putString("sources", array.toString()).apply()
+        prefs.edit().putString("rss_sources_v2", array.toString()).apply()
         refreshFeeds()
     }
 
-    private fun fetchLeadItem(source: FeedSource): RssFeedItem? {
+    private fun fetchFeedItems(source: FeedSource): List<RssFeedItem> {
         val request = Request.Builder()
             .url(source.url)
-            .header("User-Agent", "AmbientLauncher/1.0")
+            // Browser-like UA required — Google News RSS silently returns empty/403 for custom agents
+            .header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
+            .header("Accept", "application/rss+xml, application/xml, text/xml, */*")
             .build()
 
         return runCatching {
             client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return null
+                if (!response.isSuccessful) return emptyList()
                 val body = response.body?.string().orEmpty()
-                if (body.isBlank()) return null
-                parseLeadItem(xml = body, source = source.name)
+                if (body.isBlank()) return emptyList()
+                parseFeedItems(xml = body, source = source.name)
             }
-        }.getOrNull()
+        }.getOrDefault(emptyList())
     }
 
-    private fun parseLeadItem(xml: String, source: String): RssFeedItem? {
+    private fun parseFeedItems(xml: String, source: String): List<RssFeedItem> {
+        val items = mutableListOf<RssFeedItem>()
         return runCatching {
             val factory = XmlPullParserFactory.newInstance()
             factory.isNamespaceAware = true
@@ -321,53 +468,82 @@ class DashboardViewModel(
             var pubDate = ""
 
             while (eventType != XmlPullParser.END_DOCUMENT) {
-                val name = parser.name
+                val localName = parser.name ?: ""
                 when (eventType) {
                     XmlPullParser.START_TAG -> {
-                        if (name.equals("item", ignoreCase = true) || name.equals("entry", ignoreCase = true)) {
+                        if (localName.equals("item", ignoreCase = true) || localName.equals("entry", ignoreCase = true)) {
                             inItem = true
                         } else if (inItem) {
                             when {
-                                name.equals("title", ignoreCase = true) -> title = parser.nextText()
-                                name.equals("link", ignoreCase = true) -> {
+                                localName.equals("title", ignoreCase = true) -> title = safeNextText(parser)
+                                localName.equals("link", ignoreCase = true) -> {
+                                    val rel = parser.getAttributeValue(null, "rel")
                                     val href = parser.getAttributeValue(null, "href")
-                                    link = href ?: parser.nextText()
+                                    if (href != null) {
+                                        // Atom: preferred rel="alternate", or no rel
+                                        if (rel == null || rel == "alternate") {
+                                            link = href
+                                        }
+                                    } else {
+                                        // RSS: simple link body
+                                        link = safeNextText(parser)
+                                    }
                                 }
-                                name.equals("pubDate", ignoreCase = true) || name.equals("published", ignoreCase = true) || name.equals("updated", ignoreCase = true) -> pubDate = parser.nextText()
+                                localName.equals("pubDate", ignoreCase = true) || 
+                                localName.equals("published", ignoreCase = true) || 
+                                localName.equals("updated", ignoreCase = true) ||
+                                localName.equals("date", ignoreCase = true) -> {
+                                    pubDate = safeNextText(parser)
+                                }
                             }
                         }
                     }
                     XmlPullParser.END_TAG -> {
-                        if (name.equals("item", ignoreCase = true) || name.equals("entry", ignoreCase = true)) {
+                        if (localName.equals("item", ignoreCase = true) || localName.equals("entry", ignoreCase = true)) {
                             if (title.isNotBlank() && link.isNotBlank()) {
-                                return RssFeedItem(
-                                    title = title.trim(),
-                                    source = source,
-                                    timestamp = parseTimeAgo(pubDate),
-                                    url = link.trim(),
-                                    publishedAtEpochMillis = parseEpochMillis(pubDate)
+                                items.add(
+                                    RssFeedItem(
+                                        title = title.trim(),
+                                        source = source,
+                                        timestamp = parseTimeAgo(pubDate),
+                                        url = link.trim(),
+                                        publishedAtEpochMillis = parseEpochMillis(pubDate)
+                                    )
                                 )
                             }
                             inItem = false
                             title = ""
                             link = ""
                             pubDate = ""
+                            
+                            if (items.size >= 8) break  // 8/source; quality over volume
                         }
                     }
                 }
                 eventType = parser.next()
             }
-            null
-        }.getOrNull()
+            items
+        }.getOrDefault(emptyList())
+    }
+
+    private fun safeNextText(parser: XmlPullParser): String {
+        return runCatching { parser.nextText() }.getOrDefault("")
     }
 
     private fun parseEpochMillis(dateStr: String): Long {
         if (dateStr.isBlank()) return 0L
+        val trimmed = dateStr.trim()
         return runCatching {
-            ZonedDateTime.parse(dateStr, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli()
+            // RSS standard
+            ZonedDateTime.parse(trimmed, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli()
         }.recoverCatching {
-            OffsetDateTime.parse(dateStr).toInstant().toEpochMilli()
-        }.getOrDefault(0L)
+            // Atom standard / ISO
+            OffsetDateTime.parse(trimmed).toInstant().toEpochMilli()
+        }.recoverCatching {
+            // Common variation: "2024-05-23 12:00:00"
+            val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(java.time.ZoneId.of("UTC"))
+            ZonedDateTime.parse(trimmed, fmt).toInstant().toEpochMilli()
+        }.getOrDefault(0L)  // 0L = unknown date; excluded by freshness gate in refreshFeeds
     }
 
     private fun parseTimeAgo(dateStr: String): String {
@@ -394,7 +570,7 @@ class DashboardViewModel(
             append("https://api.open-meteo.com/v1/forecast?")
             append("latitude=$latitude")
             append("&longitude=$longitude")
-            append("¤t=temperature_2m,weather_code")
+            append("&current=temperature_2m,weather_code")
             append("&daily=temperature_2m_max,temperature_2m_min")
             append("&forecast_days=1")
             append("&timezone=auto")

@@ -3,6 +3,7 @@ import java.util.Properties
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 val localProperties = Properties().apply {
@@ -29,15 +30,16 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+        val key = localProperties.getProperty("geminiApiKey") ?: localProperties.getProperty("GEMINI_API_KEY", "")
         buildConfigField(
             "String",
             "GEMINI_API_KEY",
-            "\"${localProperties.getProperty("geminiApiKey", "").escapeForBuildConfig()}\""
+            "\"${key.escapeForBuildConfig()}\""
         )
         buildConfigField(
             "String",
             "GEMINI_MODEL",
-            "\"${localProperties.getProperty("geminiModel", "gemini-2.5-flash").escapeForBuildConfig()}\""
+            "\"${localProperties.getProperty("geminiModel", "gemini-1.5-flash").escapeForBuildConfig()}\""
         )
     }
 
@@ -91,6 +93,12 @@ dependencies {
     
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    // Serialization
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+
+    // HTML Parsing (Reading Mode)
+    implementation("org.jsoup:jsoup:1.16.1")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

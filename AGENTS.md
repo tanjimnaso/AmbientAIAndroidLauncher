@@ -27,6 +27,11 @@ The goal is to create a calm, ambient launcher with an editorial "Windows Phone-
    - Do not introduce raw hex colors (e.g., `Color(0xFF...)`) into UI files. 
    - Only use `AmbientTheme.palette` surfaces (`panel`, `elevatedPanel`, `searchPanel`, `chipBackground`).
 
+6. **Time Horizon Dashboard.**
+   - The timelines use vertical leader lines for labels.
+   - Do not use diagonal lines or overlapping text; use staggered vertical offsets or multi-line wrapping if needed.
+   - The entire timeline area is a unified interactive target that triggers the "Forecast Observation Deck" (Slide-out Panel).
+
 ## Making Changes
 - Always review `todo.md` and `REQUIREMENTS.md` before attempting a refactor.
 - If testing `SharedPreferences` defaults or seeding configuration logic (`LauncherConfigStore`), always use `adb shell pm clear com.ambient.launcher` to ensure a clean slate, otherwise your logic may not trigger.

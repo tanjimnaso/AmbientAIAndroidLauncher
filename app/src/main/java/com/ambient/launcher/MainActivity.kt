@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.ambient.launcher.home.LauncherScreen
 import com.ambient.launcher.ui.theme.AmbientLauncherTheme
 
@@ -19,16 +22,18 @@ class MainActivity : ComponentActivity() {
     private val mediaViewModel: MediaViewModel by viewModels()
     private val readingViewModel: ReadingViewModel by viewModels()
     private val briefingViewModel: BriefingViewModel by viewModels()
+    private val todoViewModel: TodoViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         ReadingServiceBus.setListener { readingViewModel.updateReadingState(it) }
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             window.attributes.layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }
-        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
         setContent {
             AmbientLauncherTheme {
                 Surface(
@@ -37,13 +42,16 @@ class MainActivity : ComponentActivity() {
                 ) {
                     LauncherScreen(
                         dashboardViewModel = dashboardViewModel,
-                        agenticAIViewModel = agenticAIViewModel,
-                        mediaViewModel = mediaViewModel,
-                        readingViewModel = readingViewModel,
-                        briefingViewModel = briefingViewModel
+                        briefingViewModel = briefingViewModel,
+                        todoViewModel = todoViewModel
                     )
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        ReadingServiceBus.setListener(null)
     }
 }
