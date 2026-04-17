@@ -25,7 +25,6 @@ internal fun TodaySettingsDialog(
     onDismiss: () -> Unit,
     onSave: (LauncherConfiguration) -> Unit
 ) {
-    var instruction by remember { mutableStateOf(configuration.briefingInstruction) }
     val rssSources = remember { mutableStateOf(configuration.rssSources) }
     val ambientPalette = AmbientTheme.palette
 
@@ -41,21 +40,6 @@ internal fun TodaySettingsDialog(
         title = { Text("Today Settings") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(20.dp), modifier = Modifier.padding(vertical = 8.dp)) {
-                Text(text = "AI Briefing Instruction", style = ResponsiveTypography.t1)  // 20sp Inter SemiBold
-                OutlinedTextField(
-                    value = instruction,
-                    onValueChange = { instruction = it },
-                    modifier = Modifier.fillMaxWidth().height(200.dp),
-                    textStyle = ResponsiveTypography.t2,  // 15sp Inter Regular
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AmbientTheme.palette.accentHigh,
-                        unfocusedBorderColor = AmbientTheme.palette.textSecondary.copy(alpha = 0.5f),
-                        focusedTextColor = AmbientTheme.palette.textPrimary,
-                        unfocusedTextColor = AmbientTheme.palette.textPrimary
-                    )
-                )
-
                 Text(text = "RSS Sources", style = ResponsiveTypography.t1)  // 20sp Inter SemiBold
                 LazyColumn(modifier = Modifier.height(150.dp)) {
                     itemsIndexed(rssSources.value) { index, source ->
@@ -107,11 +91,7 @@ internal fun TodaySettingsDialog(
         },
         confirmButton = {
             TextButton(onClick = {
-                onSave(
-                    configuration
-                        .setBriefingInstruction(instruction)
-                        .setRssSources(rssSources.value)
-                )
+                onSave(configuration.setRssSources(rssSources.value))
                 onDismiss()
             }) {
                 Text("Save")
@@ -219,7 +199,7 @@ internal fun AppEditDialog(
                             Text(
                                 text = configuration.displayTitle(bucket),
                                 modifier = Modifier.padding(16.dp),
-                                color = Color.White
+                                color = AmbientTheme.palette.textPrimary
                             )
                         }
                     }

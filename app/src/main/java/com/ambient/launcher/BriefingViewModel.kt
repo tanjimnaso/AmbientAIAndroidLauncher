@@ -39,8 +39,8 @@ private fun String.stripMarkdown(): String = this
 private const val PREFS_NAME = "briefing_cache"
 private const val KEY_BRIEFING = "last_briefing"
 private const val KEY_TIMESTAMP = "last_briefing_timestamp"
-// Briefing slots: 7 AM and 7 PM. Cache is stale if generated before the last slot boundary.
-private val BRIEFING_SLOT_HOURS = listOf(7, 19)
+// Briefing refreshes once per day at 7 AM. Cache is stale if generated before today's 7 AM.
+private val BRIEFING_SLOT_HOURS = listOf(7)
 
 private fun lastSlotTime(): Long {
     val now = LocalDateTime.now()
@@ -85,12 +85,18 @@ internal class BriefingViewModel(application: Application) : AndroidViewModel(ap
     private val _briefing = MutableStateFlow<String?>(null)
     val briefing: StateFlow<String?> = _briefing.asStateFlow()
 
-    // null = idle/not yet requested; non-null = ready (content or error message)
+    // null = idle/not yet requested; non-null = ready
     private val _analysis = MutableStateFlow<String?>(null)
     val analysis: StateFlow<String?> = _analysis.asStateFlow()
 
     private val _isAnalysisLoading = MutableStateFlow(false)
     val isAnalysisLoading: StateFlow<Boolean> = _isAnalysisLoading.asStateFlow()
+
+    private val _isBriefingLoading = MutableStateFlow(false)
+    val isBriefingLoading: StateFlow<Boolean> = _isBriefingLoading.asStateFlow()
+
+    private val _analysisHasError = MutableStateFlow(false)
+    val analysisHasError: StateFlow<Boolean> = _analysisHasError.asStateFlow()
 
     init {
         val cached = prefs.getString(KEY_BRIEFING, null)
@@ -101,7 +107,7 @@ internal class BriefingViewModel(application: Application) : AndroidViewModel(ap
 
     private var lastHeadlinesHash: Int = 0
 
-    fun generateBriefing(headlines: List<String>, customInstruction: String? = null, location: String = "Padstow, Sydney, NSW") {
+    fun generateBriefing(headlines: List<String>, location: String = "Padstow, Sydney, NSW") {
         if (headlines.isEmpty()) return
 
         val headlinesHash = headlines.hashCode()
@@ -114,11 +120,16 @@ internal class BriefingViewModel(application: Application) : AndroidViewModel(ap
         if (headlinesHash == lastHeadlinesHash && _briefing.value != null) return
 
         lastHeadlinesHash = headlinesHash
+        // Clear stale analysis whenever briefing input changes
+        _analysis.value = null
+        _analysisHasError.value = false
 
         if (BuildConfig.GEMINI_API_KEY.isBlank()) {
-            _briefing.value = generateLocalBriefing(headlines)
+            _briefing.value = null // show "No data" in UI
             return
         }
+
+        _isBriefingLoading.value = true
 
         viewModelScope.launch(Dispatchers.IO) {
             val systemInstruction = """
@@ -133,7 +144,7 @@ internal class BriefingViewModel(application: Application) : AndroidViewModel(ap
                 - Interests: Energy market economics (AEMO), AI structural impact, local LLMs, edge computing, photography (aesthetic/philosophical).
                 
                 ## Processing & Analysis Rules
-                1. Prioritize high-signal, low-hype reporting. Avoid celebrity gossip or surface-level AI hype.
+                1. Prioritize high-signal, low-hype reporting. Avoid celebrity gossip or surface-level marketing/business hype.
                 2. Identify structurally significant global events.
                 3. For top developments, explain via systems and tradeoffs: 
                    - Tech/Professional: Impact on software, hardware, or cloud (GCP/BigQuery).
@@ -169,16 +180,17 @@ internal class BriefingViewModel(application: Application) : AndroidViewModel(ap
                         .putLong(KEY_TIMESTAMP, System.currentTimeMillis())
                         .apply()
                 } else {
-                    _briefing.value = generateLocalBriefing(headlines)
+                    _briefing.value = null // empty response → "No data" in UI
                 }
             }
 
             result.onFailure { e ->
                 Log.e(TAG, "Gemini call failed: ${e.message}")
-                if (_briefing.value == null) {
-                    _briefing.value = generateLocalBriefing(headlines)
-                }
+                // Keep existing briefing if present; otherwise show "No data"
+                if (_briefing.value.isNullOrBlank()) _briefing.value = null
             }
+
+            _isBriefingLoading.value = false
         }
     }
 
@@ -235,6 +247,7 @@ internal class BriefingViewModel(application: Application) : AndroidViewModel(ap
         }
 
         _isAnalysisLoading.value = true
+        _analysisHasError.value = false
 
         viewModelScope.launch(Dispatchers.IO) {
             val prompt = """
@@ -267,6 +280,7 @@ internal class BriefingViewModel(application: Application) : AndroidViewModel(ap
                 val clean = text?.stripMarkdown()
                 if (!clean.isNullOrBlank()) {
                     _analysis.value = clean
+                    _analysisHasError.value = false
                     prefs.edit()
                         .putString(KEY_ANALYSIS, clean)
                         .putInt(KEY_ANALYSIS_HASH, inputHash)
@@ -275,7 +289,8 @@ internal class BriefingViewModel(application: Application) : AndroidViewModel(ap
                     postSystemNotification("Analysis ready", "Tap to read the full intelligence brief.")
                 } else {
                     Log.w(TAG, "Analysis: empty/null response body after ${elapsedMs}ms")
-                    _analysis.value = "Analysis unavailable — empty response from Gemini."
+                    _analysis.value = null
+                    _analysisHasError.value = true
                     postSystemNotification("Analysis failed", "Empty response from Gemini.")
                 }
             }
@@ -283,12 +298,12 @@ internal class BriefingViewModel(application: Application) : AndroidViewModel(ap
             result.onFailure { e ->
                 val isTimeout = e is java.net.SocketTimeoutException ||
                     e.message?.contains("timeout", ignoreCase = true) == true
-                val msg = if (isTimeout) "Timed out after ${elapsedMs / 1000}s — try again." else "Analysis unavailable. ${e.message}"
                 Log.e(TAG, "Analysis failed after ${elapsedMs}ms — ${if (isTimeout) "TIMEOUT" else e.javaClass.simpleName}: ${e.message}")
-                _analysis.value = msg
+                _analysis.value = null
+                _analysisHasError.value = true
                 postSystemNotification(
                     if (isTimeout) "Analysis timed out" else "Analysis failed",
-                    msg
+                    if (isTimeout) "Timed out after ${elapsedMs / 1000}s. Check Cloud billing." else "Check Google Cloud billing/quota."
                 )
             }
 
@@ -360,9 +375,29 @@ internal class BriefingViewModel(application: Application) : AndroidViewModel(ap
         }
     }
 
-    private fun generateLocalBriefing(headlines: List<String>): String {
-        return "Synchronizing global intelligence across ${headlines.size} sources. Standby for editorial synthesis."
+    /** Force-clears slot cache so the next generateBriefing() call goes to the network. */
+    fun clearBriefingCache() {
+        lastHeadlinesHash = 0
+        _briefing.value = null
+        _analysis.value = null
+        _analysisHasError.value = false
+        prefs.edit()
+            .remove(KEY_BRIEFING)
+            .remove(KEY_TIMESTAMP)
+            .apply()
     }
+
+    /**
+     * Returns the single cached analysis entry (text, epoch-millis timestamp), or null if none.
+     * Reads SharedPreferences synchronously — safe to call from composition via remember{}.
+     */
+    fun getCachedAnalysisEntry(): Pair<String, Long>? {
+        val text = prefs.getString(KEY_ANALYSIS, null)
+        val ts = prefs.getLong(KEY_ANALYSIS_TIMESTAMP, 0L)
+        return if (!text.isNullOrBlank() && ts > 0L) text to ts else null
+    }
+
+    private fun generateLocalBriefing(@Suppress("UNUSED_PARAMETER") headlines: List<String>): String = ""
 
     private fun fetchBriefingResponse(prompt: String): String? {
         val requestBody = JSONObject().apply {

@@ -12,6 +12,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.produceState
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
@@ -42,6 +46,15 @@ fun rememberAppIcon(packageName: String): ImageBitmap? {
             }
         }
     }.value
+}
+
+/** Reusable icon filter that desaturates and tints for an ambient industrial look. */
+internal fun getAmbientIconFilter(bucketColor: Color): ColorFilter {
+    // 1. Desaturate to 20% to remove noisy branding colors
+    // 2. Blend with bucket color at 55% opacity to unify the interface
+    // Note: Chaining ColorMatrix and Tint is complex in Compose, 
+    // but Tint + BlendMode.SrcAtop does most of the heavy lifting.
+    return ColorFilter.tint(bucketColor.copy(alpha = 0.55f), BlendMode.SrcAtop)
 }
 
 /**

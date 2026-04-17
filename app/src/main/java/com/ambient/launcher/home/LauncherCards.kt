@@ -5,14 +5,26 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,6 +37,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ambient.launcher.BatteryUiState
 import com.ambient.launcher.RssFeedItem
 import com.ambient.launcher.ui.theme.AmbientTheme
 import com.ambient.launcher.ui.theme.InterFontFamily
@@ -33,13 +46,44 @@ import com.ambient.launcher.ui.theme.InterFontFamily
 // UI components for the Launcher Home screen
 
 /**
- * RecentAppsStrip
+ * HomeAppBar
  *
- * Compact horizontal row of up to 6 most-used apps, displayed directly under the masthead.
- * No tile backgrounds — just icon + label, evenly spaced across the full width.
+ * The top-most fixed status bar showing global context and battery life.
  */
 @Composable
-internal fun RecentAppsStrip(
+internal fun HomeAppBar(
+    battery: BatteryUiState,
+    modifier: Modifier = Modifier
+) {
+    val batteryStatusText = if (battery.isCharging) {
+        "${battery.percentage}% • CHARGING"
+    } else {
+        "${battery.percentage}% • ${battery.remainingHours}H ${battery.remainingMinutes}M"
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 28.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.End,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = batteryStatusText,
+            style = ResponsiveTypography.t3.copy(letterSpacing = 0.5.sp),
+            color = AmbientTheme.palette.textSecondary.copy(alpha = 0.7f)
+        )
+    }
+}
+
+/**
+ * TextQuickApps
+ *
+ * Purely textual, icon-less quick app launcher grid.
+ * Styled like an editorial index or forecast table.
+ */
+@Composable
+internal fun TextQuickApps(
     apps: List<AppInfo>,
     onAppClick: (AppInfo) -> Unit,
     modifier: Modifier = Modifier
@@ -47,41 +91,18 @@ internal fun RecentAppsStrip(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(20.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        apps.take(6).forEach { app ->
-            val iconBitmap = rememberAppIcon(app.packageName)
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { onAppClick(app) },
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(5.dp)
-            ) {
-                Box(
-                    modifier = Modifier.size(40.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    iconBitmap?.let {
-                        Image(
-                            bitmap = it,
-                            contentDescription = app.label,
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                        )
-                    }
-                }
-                Text(
-                    text = app.label,
-                    style = ResponsiveTypography.t3,
-                    color = AmbientTheme.palette.textSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center
-                )
-            }
+        apps.forEach { app ->
+            Text(
+                text = app.label,
+                style = ResponsiveTypography.t2.copy(fontWeight = FontWeight.Normal),
+                color = AmbientTheme.palette.textPrimary.copy(alpha = 0.9f),
+                maxLines = 1,
+                modifier = Modifier.clickable { onAppClick(app) }
+            )
         }
     }
 }
@@ -113,10 +134,7 @@ internal fun ProjectCard(
             ) {
                 Text(
                     text = kicker,
-                    style = ResponsiveTypography.t3.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        letterSpacing = 0.5.sp
-                    ),
+                    style = ResponsiveTypography.t3.copy(letterSpacing = 0.5.sp),
                     color = AmbientTheme.palette.textPrimary.copy(alpha = 0.6f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -189,38 +207,67 @@ internal fun ProjectCard(
 @Composable
 internal fun AiBriefingSection(
     briefing: String?,
+    isBriefingLoading: Boolean = false,
     isAnalysisLoading: Boolean = false,
     isAnalysisReady: Boolean = false,
+    analysisHasError: Boolean = false,
     modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null,
+    onOpenCloudNotifications: (() -> Unit)? = null
 ) {
-    if (briefing.isNullOrBlank()) return
+    val displayText = when {
+        !briefing.isNullOrBlank() -> briefing
+        isBriefingLoading -> "Refreshing..."
+        else -> "No data"
+    }
+    val textAlpha = if (briefing.isNullOrBlank()) 0.35f else 0.95f
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(vertical = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Text(
-            text = briefing,
-            style = ResponsiveTypography.d3,
-            color = AmbientTheme.palette.textPrimary.copy(alpha = 0.95f),
-            modifier = Modifier.fillMaxWidth()
-        )
-        if (onClick != null) {
-            val label = when {
-                isAnalysisLoading -> "AWAITING..."
-                isAnalysisReady -> "READ ANALYSIS"
-                else -> "ANALYSE →"
-            }
+    val label = when {
+        isAnalysisLoading -> "AWAITING..."
+        analysisHasError  -> "ERROR"
+        isAnalysisReady   -> "READ ANALYSIS"
+        else              -> "ANALYSE →"
+    }
+    val labelColor = when {
+        analysisHasError  -> AmbientTheme.palette.errorAccent
+        isAnalysisLoading -> AmbientTheme.palette.accentHigh.copy(alpha = 0.35f)
+        else              -> AmbientTheme.palette.accentHigh.copy(alpha = 0.7f)
+    }
+    val labelAction: (() -> Unit)? = when {
+        isAnalysisLoading -> null
+        analysisHasError  -> onOpenCloudNotifications
+        else              -> onClick
+    }
+
+    Column(modifier = modifier) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(AmbientTheme.palette.panel.copy(alpha = 0.3f))
+                .padding(horizontal = 28.dp, vertical = 12.dp)
+        ) {
+            Text(
+                text = displayText,
+                style = ResponsiveTypography.t2,
+                color = AmbientTheme.palette.textPrimary.copy(alpha = textAlpha),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            )
+        }
+
+        // Action label — sits below the summary panel, flush right
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(end = 28.dp, top = 10.dp),
+            horizontalArrangement = Arrangement.End
+        ) {
             Text(
                 text = label,
-                style = ResponsiveTypography.t3.copy(fontWeight = FontWeight.SemiBold),
-                color = AmbientTheme.palette.accentHigh.copy(
-                    alpha = if (isAnalysisLoading) 0.4f else 0.7f
-                )
+                style = ResponsiveTypography.t3,
+                color = labelColor,
+                modifier = if (labelAction != null) Modifier.clickable(onClick = labelAction) else Modifier
             )
         }
     }
@@ -229,73 +276,154 @@ internal fun AiBriefingSection(
 @Composable
 internal fun HeadlinesSection(
     feedItems: List<RssFeedItem>,
+    lastRefreshTime: Long = 0L,
     onFeedClick: (RssFeedItem) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onRefresh: (() -> Unit)? = null
 ) {
-    if (feedItems.isEmpty()) {
-        HeadlineItem(
-            modifier = modifier,
-            source = "",
-            title = "Aggregating latest intelligence...",
-            onClick = null
-        )
-        return
-    }
+    val density = LocalDensity.current
+    // Pull-to-refresh: track how far the user has over-pulled past the top.
+    // We use a NestedScrollConnection on the outer Column — the inner verticalScroll
+    // can't consume downward drag when already at position 0, so the leftover delta
+    // flows back up to us via onPostScroll (available.y > 0).
+    var pullOffsetPx by remember { mutableStateOf(0f) }
+    val triggerPx    = with(density) { 64.dp.toPx() }
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .fillMaxHeight(),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight()
-                .verticalScroll(rememberScrollState())
-                .widthIn(max = 640.dp),  // Aggressive utilitarian width constraint
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            for (item in feedItems) {
-                HeadlineItem(
-                    source = item.source,
-                    title = item.title,
-                    onClick = { onFeedClick(item) }
-                )
+    val pullRefreshConnection = remember(onRefresh) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                // Collapse the pull indicator when scrolling back up
+                if (pullOffsetPx > 0f && available.y < 0f) {
+                    val consumed = maxOf(available.y, -pullOffsetPx)
+                    pullOffsetPx += consumed
+                    return Offset(0f, consumed)
+                }
+                return Offset.Zero
+            }
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                if (available.y > 0f && onRefresh != null) {
+                    pullOffsetPx = (pullOffsetPx + available.y).coerceAtMost(triggerPx * 1.5f)
+                }
+                return Offset.Zero
+            }
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                if (pullOffsetPx >= triggerPx) onRefresh?.invoke()
+                pullOffsetPx = 0f
+                return Velocity.Zero
             }
         }
     }
+
+    Column(modifier = modifier.fillMaxWidth().nestedScroll(pullRefreshConnection)) {
+        // Pull indicator — a subtle arrow/text that fades in as you pull
+        if (pullOffsetPx > 0f) {
+            val indicatorAlpha = (pullOffsetPx / triggerPx).coerceIn(0f, 1f)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(with(density) { (pullOffsetPx / 2f).toDp().coerceAtMost(32.dp) }),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text  = if (pullOffsetPx >= triggerPx) "↑ Release to refresh" else "↓ Pull to refresh",
+                    style = ResponsiveTypography.t3,
+                    color = AmbientTheme.palette.textSecondary.copy(alpha = indicatorAlpha * 0.6f)
+                )
+            }
+        }
+
+        if (feedItems.isEmpty()) {
+            HeadlineItem(
+                source = "",
+                title  = "Aggregating latest intelligence...",
+                onClick = null
+            )
+            TimestampFooter(lastRefreshTime)
+            return@Column
+        }
+
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .widthIn(max = 640.dp),
+            contentPadding = PaddingValues(vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(40.dp)
+        ) {
+            items(feedItems, key = { it.url }) { item ->
+                HeadlineItem(
+                    source = item.source,
+                    title = item.title,
+                    publishedAtEpochMillis = item.publishedAtEpochMillis,
+                    onClick = { onFeedClick(item) }
+                )
+            }
+            item { Spacer(Modifier.height(8.dp)) }
+        }
+        TimestampFooter(lastRefreshTime)
+    }
+}
+
+@Composable
+private fun TimestampFooter(lastRefreshTime: Long) {
+    if (lastRefreshTime <= 0L) return
+    Text(
+        text = "updated ${formatElapsed(lastRefreshTime)}",
+        style = ResponsiveTypography.t3,
+        color = AmbientTheme.palette.textSecondary.copy(alpha = 0.35f),
+        textAlign = TextAlign.End,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 6.dp, bottom = 4.dp)
+    )
 }
 
 @Composable
 private fun HeadlineItem(
     source: String,
     title: String,
+    publishedAtEpochMillis: Long = 0L,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null
 ) {
     Column(
         modifier = modifier
+            .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(vertical = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+            .padding(horizontal = 28.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // Source as colored functional label
-        if (source.isNotBlank()) {
-            Text(
-                text = source.uppercase(),
-                style = ResponsiveTypography.t3.copy(fontWeight = FontWeight.SemiBold),
-                color = getSourceColor(source),
-                letterSpacing = 0.5.sp
-            )
+        // Kicker row: source (left) + timestamp (right)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (source.isNotBlank()) {
+                Text(
+                    text = source.uppercase(),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.2.sp,
+                    color = getSourceColor(source).copy(alpha = 0.85f)
+                )
+            }
+            if (publishedAtEpochMillis > 0L) {
+                Text(
+                    text = formatElapsed(publishedAtEpochMillis),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = AmbientTheme.palette.textPrimary.copy(alpha = 0.4f)
+                )
+            }
         }
 
-        // Title bold and prominent
+        // Title — flush left, ragged right
         Text(
             text = title,
-            style = ResponsiveTypography.t1.copy(fontWeight = FontWeight.Bold),
+            fontSize = 19.sp,
+            fontWeight = FontWeight.SemiBold,
+            lineHeight = 25.sp,
             color = AmbientTheme.palette.textPrimary,
-            maxLines = 3,
             overflow = TextOverflow.Ellipsis
         )
     }
@@ -451,7 +579,7 @@ private fun BentoAppTile(
                         modifier = Modifier
                             .size(iconSize)
                             .clip(RoundedCornerShape(4.dp)),
-                        colorFilter = ColorFilter.tint(bucketColor.copy(alpha = 0.55f), BlendMode.SrcAtop)
+                        colorFilter = getAmbientIconFilter(bucketColor)
                     )
                 }
             }

@@ -1,51 +1,29 @@
 package com.ambient.launcher.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import android.content.Intent
-import android.provider.Settings
-import com.ambient.launcher.WeatherUiState
 import com.ambient.launcher.BatteryUiState
+import com.ambient.launcher.WeatherUiState
 import com.ambient.launcher.ui.theme.AmbientTheme
-import com.ambient.launcher.ui.theme.InterFontFamily
-import com.ambient.launcher.ui.theme.SyneFontFamily
 import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
-import java.time.temporal.WeekFields
 import java.util.Locale
 
 /**
  * Masthead
  *
- * Full-width date/time/weather header — news-first hierarchy.
- * Uses ResponsiveTypography for consistency.
- *
- * Left:  DAY NAME (H1 / Syne Light 40sp)
- *        Full Date (T2 / Inter 15sp, secondary)
- * Right: Temp (H1 / Syne Light 40sp)
- *        Time (T2 / Inter 15sp, secondary)
- * Right: Season Chip (T3 / Inter 12sp, metadata)
+ * Only designed for S22 Ultra (center-cutout display).
  */
 @Composable
 internal fun Masthead(
@@ -53,15 +31,10 @@ internal fun Masthead(
     battery: BatteryUiState,
     modifier: Modifier = Modifier
 ) {
-    val today = LocalDate.now()
-    val dayName = today.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH).uppercase()
+    val today      = LocalDate.now()
+    val dayName    = today.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH).uppercase()
     val dateString = "${today.month.getDisplayName(TextStyle.FULL, Locale.ENGLISH)} ${today.dayOfMonth}, ${today.year}"
-    val weekFields = WeekFields.of(Locale.getDefault())
-    val weekOfYear = today.get(weekFields.weekOfYear())
-    val weeksInYear = 52
-    val weekString = "WEEK $weekOfYear/$weeksInYear"
-    val season = remember { getCurrentSeason() }
-    val context = LocalContext.current
+    val season     = remember { getCurrentSeason() }
 
     var currentTime by remember { mutableStateOf(LocalTime.now()) }
     LaunchedEffect(Unit) {
@@ -70,127 +43,112 @@ internal fun Masthead(
             currentTime = LocalTime.now()
         }
     }
-    val timeString = currentTime.format(DateTimeFormatter.ofPattern("h:mma")).lowercase()
-
-    // Pure typographic layout: three lines, left-right justified
-    val batteryText = if (battery.isCharging) {
-        "${battery.percentage}% • Charging"
-    } else {
-        "${battery.percentage}% • ${battery.remainingHours}h ${battery.remainingMinutes}m"
-    }
+    val timeString = currentTime.format(DateTimeFormatter.ofPattern("h:mm a")).lowercase()
+    val density = LocalDensity.current
 
     Column(
-        modifier = modifier
-            .fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        // Line 1: SUNDAY _ 6:40pm
+        // ── Row 1: DAY (Start) | TIME & BATTERY (End) ────────────────
+        // Using a Row ensures the elements cannot overlap. 
+        // We push the time/battery to the end, respecting the cutout/system insets.
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 28.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            // Left side: Day Name
+            Text(
+                text = dayName,
+                style = ResponsiveTypography.h1,
+                color = AmbientTheme.palette.textSecondary.copy(alpha = 0.6f),
+                // Weight allows it to take up space without pushing the right side off screen.
+                // We don't want it to squish the time, so we let the time dictate its width.
+                modifier = Modifier.weight(1f, fill = false),
+                maxLines = 1, // Prevent it from pushing layout down if text scales up
+            )
+
+            // Right side: Time and Battery
+            Row(
+                modifier = Modifier.offset(x = with(density) { 60.toDp() }),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = timeString,
+                    style = ResponsiveTypography.h1,
+                    color = AmbientTheme.palette.textSecondary.copy(alpha = 0.6f)
+                )
+
+                // Battery: percentage and time left stacked
+                Column(
+                    modifier = Modifier.padding(bottom = 6.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.End // Align right since it's on the right edge
+                ) {
+                    Text(
+                        text = "${battery.percentage}%",
+                        style = ResponsiveTypography.t3,
+                        color = AmbientTheme.palette.textSecondary.copy(alpha = 0.6f)
+                    )
+                    val batterySub = if (battery.isCharging) "CHG"
+                    else "${battery.remainingHours}h ${battery.remainingMinutes}m"
+                    Text(
+                        text = batterySub,
+                        style = ResponsiveTypography.t3.copy(fontSize = 9.sp),
+                        color = AmbientTheme.palette.textSecondary.copy(alpha = 0.6f),
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+
+        // ── Row 2: DATE/SEASON (Start) | TEMP (End) ──────────────────────────────────
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 28.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top
         ) {
-            Text(
-                text = dayName,
-                style = ResponsiveTypography.d1,
-                color = AmbientTheme.palette.textPrimary
-            )
-            Text(
-                text = timeString,
-                style = ResponsiveTypography.d1,
-                color = AmbientTheme.palette.textPrimary
-            )
-        }
-
-        // Line 2: April 12, 2026 AUTUMN _ 15° CLOUDY
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Left: Date + Season inline
             Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
                     text = dateString,
                     style = ResponsiveTypography.t2,
-                    color = AmbientTheme.palette.textSecondary
+                    color = AmbientTheme.palette.textSecondary.copy(alpha = 0.6f)
                 )
                 SeasonChip(season = season)
             }
-
-            // Right: Temp + Weather
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            if (weather.isAvailable) {
                 Text(
-                    text = if (weather.temperatureText.isNotBlank()) weather.temperatureText else "—",
+                    text = "${weather.temperatureText} ${weather.summary.lowercase()}",
                     style = ResponsiveTypography.t2,
-                    color = if (weather.temperatureText.isNotBlank()) AmbientTheme.palette.textPrimary else AmbientTheme.palette.textSecondary.copy(alpha = 0.5f)
-                )
-                Text(
-                    text = weather.summary.uppercase(),
-                    style = ResponsiveTypography.t2.copy(fontWeight = FontWeight.Light),
-                    color = AmbientTheme.palette.textSecondary
+                    color = AmbientTheme.palette.textSecondary.copy(alpha = 0.6f)
                 )
             }
-        }
-
-        // Line 3: Week 15/52 _ battery
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = weekString,
-                style = ResponsiveTypography.t3.copy(fontWeight = FontWeight.Light),
-                color = AmbientTheme.palette.textSecondary
-            )
-            Text(
-                text = batteryText,
-                style = ResponsiveTypography.t2.copy(fontWeight = FontWeight.Light),
-                color = AmbientTheme.palette.textSecondary,
-                modifier = Modifier.clickable {
-                    try {
-                        val intent = Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS)
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        context.startActivity(intent)
-                    } catch (_: Exception) {}
-                }
-            )
         }
     }
 }
 
 @Composable
-private fun SeasonChip(
-    season: String,
-    modifier: Modifier = Modifier
-) {
+private fun SeasonChip(season: String, modifier: Modifier = Modifier) {
     val color = when (season) {
         "Spring" -> Color(0xFF4CAF50)
         "Summer" -> Color(0xFFFFC107)
         "Autumn" -> Color(0xFFFF9800)
         "Winter" -> Color(0xFF2196F3)
-        else -> AmbientTheme.palette.accentHigh
+        else     -> AmbientTheme.palette.accentHigh
     }
-
-    Surface(
-        modifier = modifier,
-        color = color.copy(alpha = 0.15f),
-        shape = RoundedCornerShape(4.dp),
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, color.copy(alpha = 0.3f))
-    ) {
+    Box(modifier = modifier.background(color.copy(alpha = 0.18f))) {
         Text(
             text = season.uppercase(),
-            style = ResponsiveTypography.t3.copy(
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 0.5.sp
-            ),
+            style = ResponsiveTypography.t3.copy(letterSpacing = 0.5.sp),
             color = color,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
         )
@@ -200,32 +158,24 @@ private fun SeasonChip(
 private fun getCurrentSeason(): String {
     val today = LocalDate.now()
     val month = today.monthValue
-    val day = today.dayOfMonth
-    val isSouthernHemisphere = java.util.TimeZone.getDefault().id.contains("Australia", ignoreCase = true) ||
-                               java.util.TimeZone.getDefault().id.contains("Pacific", ignoreCase = true) ||
-                               java.util.TimeZone.getDefault().id.startsWith("America/Argentina", ignoreCase = true) ||
-                               java.util.TimeZone.getDefault().id.startsWith("America/Sao_Paulo", ignoreCase = true) ||
-                               java.util.TimeZone.getDefault().id.startsWith("Africa/Johannesburg", ignoreCase = true)
-    
-    return if (isSouthernHemisphere) {
-        when (month) {
-            3, 4, 5 -> "Autumn"
-            6, 7, 8 -> "Winter"
-            9, 10, 11 -> "Spring"
-            12, 1, 2 -> "Summer"
-            else -> "Summer"
-        }
+    val day   = today.dayOfMonth
+    val tz    = java.util.TimeZone.getDefault().id
+    val isSouth = tz.contains("Australia", true) || tz.contains("Pacific", true) ||
+                  tz.startsWith("America/Argentina", true) ||
+                  tz.startsWith("America/Sao_Paulo", true) ||
+                  tz.startsWith("Africa/Johannesburg", true)
+    return if (isSouth) {
+        when (month) { 3, 4, 5 -> "Autumn"; 6, 7, 8 -> "Winter"; 9, 10, 11 -> "Spring"; else -> "Summer" }
     } else {
         when (month) {
-            3 -> if (day >= 20) "Spring" else "Winter"
+            3  -> if (day >= 20) "Spring" else "Winter"
             4, 5 -> "Spring"
-            6 -> if (day >= 21) "Summer" else "Spring"
+            6  -> if (day >= 21) "Summer" else "Spring"
             7, 8 -> "Summer"
-            9 -> if (day >= 22) "Autumn" else "Summer"
+            9  -> if (day >= 22) "Autumn" else "Summer"
             10, 11 -> "Autumn"
             12 -> if (day >= 21) "Winter" else "Autumn"
             else -> "Winter"
         }
     }
 }
-

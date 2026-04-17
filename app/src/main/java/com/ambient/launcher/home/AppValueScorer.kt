@@ -65,20 +65,19 @@ internal object AppValueScorer {
         "chrome", "brave.browser", "firefox", "vivaldi",
         "claude", "chatgpt", "openai.chat", "anthropic",
         "gemini", "google.android.apps.bard",
-        "consultant",
+        "consultant", "deepseek", "aistudio", "google.android.apps.aistudio",
         "google.android.apps.maps", "waze", "tripview", "opal",
         "strava", "training", "nike.run", "cyclers",
         "google.android.apps.photos", "lightroom",
-        "spotify"
+        "spotify", "amazon.shopping", "service.nsw"
     ).any(id::contains)
 
     /** Lookup / Browse × Weekly = 4 → index only. */
     private fun isLowValue(id: String) = listOf(
-        "perplexity", "grok.x", "kimi", "aistudio", "google.android.apps.aistudio",
-        "deepseek", "manus", "qwen",
+        "perplexity", "grok.x", "kimi", "manus", "qwen",
         "runna", "medad", "myfitnesspal", "medicar",
-        "authenticator", "myid", "mygov", "service.nsw",
-        "amazon.shopping", "doordash", "ubereats", "skymee"
+        "authenticator", "myid", "mygov",
+        "doordash", "ubereats", "skymee"
     ).any(id::contains)
 
     // ── Wide-tile defaults ───────────────────────────────────────────────────

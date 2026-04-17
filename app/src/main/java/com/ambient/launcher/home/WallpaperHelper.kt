@@ -12,7 +12,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 object WallpaperHelper {
+    private var lastSetColorArgb: Int? = null
+
     suspend fun setSolidColorWallpaper(context: Context, color: Color) {
+        val argb = color.toArgb()
+        if (argb == lastSetColorArgb) return
         withContext(Dispatchers.Default) {
             val wallpaperManager = WallpaperManager.getInstance(context)
             try {
@@ -21,17 +25,16 @@ object WallpaperHelper {
 
                 val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                 val canvas = Canvas(bitmap)
-                val paint = Paint().apply {
-                    this.color = color.toArgb()
-                }
+                val paint = Paint().apply { this.color = argb }
                 canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    wallpaperManager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK)
+                    wallpaperManager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_SYSTEM)
                 } else {
                     wallpaperManager.setBitmap(bitmap)
                 }
                 bitmap.recycle()
+                lastSetColorArgb = argb
             } catch (e: Exception) {
                 e.printStackTrace()
             }

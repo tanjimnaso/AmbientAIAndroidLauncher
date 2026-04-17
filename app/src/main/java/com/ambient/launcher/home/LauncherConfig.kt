@@ -8,6 +8,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.graphics.Color
 import com.ambient.launcher.defaultFeedSources
 import com.ambient.launcher.ui.theme.AmbientPalette
@@ -40,7 +42,7 @@ internal enum class LauncherBucket(
     AI("ai", "AI", "Chat and assistant apps"),
     SOCIAL("social", "Social", "Messaging, photos, social surfaces"),
     HEALTH("health", "Health", "Health, fitness, and medical apps"),
-    SECURITY("security", "Security", "Banking, authenticators, identity apps"),
+    SECURITY("security", "Banking & Security", "Banking, authenticators, identity apps"),
     WALLET("wallet", "Wallet", "Wallets and payment apps"),
     UTILITIES("utilities", "Utilities", "Phone, messages, navigation, productivity"),
     TOOLS("tools", "Tools", "Calculator, files, notes, quick productivity"),
@@ -48,11 +50,17 @@ internal enum class LauncherBucket(
     HARDWARE("hardware", "Hardware", "Device utilities and performance tools"),
     TRANSPORT_DELIVERY("transport", "Transport & Delivery", "Navigation, rideshare, food delivery"),
     DATING("dating", "Dating", "Dating and social discovery apps"),
+    ENTERTAINMENT("entertainment", "Entertainment", "Music, video, and streaming apps"),
+    DEV("dev", "Dev", "GitHub, Cloud, and tracking tools"),
     SYSTEM_BLOAT("bloat", "System & Bloat", "OS clutter and rarely-opened apps"),
     MISC("misc", "Misc", "Unknown purpose or single-use apps");
 
     companion object {
-        val indexBuckets = listOf(NEWS, BROWSERS, AI, SOCIAL, HEALTH, SECURITY, WALLET, UTILITIES, TOOLS, SMART_HOME, HARDWARE, TRANSPORT_DELIVERY, DATING, SYSTEM_BLOAT, MISC)
+        val indexBuckets = listOf(
+            NEWS, SECURITY, SOCIAL, UTILITIES, AI, BROWSERS, HEALTH,
+            ENTERTAINMENT, TOOLS, WALLET, TRANSPORT_DELIVERY, HARDWARE, DATING,
+            DEV, SMART_HOME
+        )
         /** Buckets that render as tile grids on home. WALLET is excluded — it's an action card. */
         val homeBuckets = indexBuckets.filterNot { it == WALLET }
     }
@@ -63,9 +71,10 @@ internal fun LauncherBucket.themeColor(palette: AmbientPalette): Color {
         LauncherBucket.NEWS, LauncherBucket.BROWSERS -> palette.clusterIntelligence
         LauncherBucket.AI -> palette.clusterAssistant
         LauncherBucket.SOCIAL, LauncherBucket.DATING -> palette.clusterCommunication
+        LauncherBucket.ENTERTAINMENT -> palette.clusterCommunication
         LauncherBucket.HEALTH -> palette.clusterHealth
         LauncherBucket.SECURITY, LauncherBucket.WALLET, LauncherBucket.UTILITIES -> palette.clusterUtility
-        LauncherBucket.TOOLS, LauncherBucket.SMART_HOME, LauncherBucket.HARDWARE, LauncherBucket.TRANSPORT_DELIVERY -> palette.clusterAction
+        LauncherBucket.TOOLS, LauncherBucket.SMART_HOME, LauncherBucket.HARDWARE, LauncherBucket.TRANSPORT_DELIVERY, LauncherBucket.DEV -> palette.clusterAction
         else -> palette.textSecondary
     }
 }
@@ -74,7 +83,7 @@ internal fun LauncherBucket.themeColor(palette: AmbientPalette): Color {
 
 internal data class LauncherConfiguration(
     val assignments: Map<LauncherBucket, List<String>>,
-    val hiddenBuckets: Set<LauncherBucket> = emptySet(),
+    val hiddenBuckets: Set<LauncherBucket> = setOf(LauncherBucket.SYSTEM_BLOAT),
     val collapsedBuckets: Set<LauncherBucket> = setOf(
         LauncherBucket.TRANSPORT_DELIVERY,
         LauncherBucket.DATING,
@@ -86,7 +95,6 @@ internal data class LauncherConfiguration(
     val customTitles: Map<LauncherBucket, String> = emptyMap(),
     val homePackages: Set<String> = emptySet(),
     val tileSizes: Map<String, TileSize> = emptyMap(),
-    val briefingInstruction: String = "Summarize these headlines into a single short, professional 'Vibe' or briefing sentence for a workstation home screen:",
     val rssSources: List<Pair<String, String>> = defaultFeedSources.map { it.name to it.url }
 ) {
     fun packagesFor(bucket: LauncherBucket): List<String> = assignments[bucket].orEmpty()
@@ -209,9 +217,6 @@ internal data class LauncherConfiguration(
     fun setTileSize(packageName: String, size: TileSize): LauncherConfiguration =
         copy(tileSizes = tileSizes + (packageName to size))
 
-    fun setBriefingInstruction(instruction: String): LauncherConfiguration =
-        copy(briefingInstruction = instruction)
-
     fun setRssSources(sources: List<Pair<String, String>>): LauncherConfiguration =
         copy(rssSources = sources)
 
@@ -234,10 +239,14 @@ internal fun rememberLauncherConfiguration(
 
     LaunchedEffect(installedApps) {
         if (installedApps.isNotEmpty() && !hasLoaded) {
-            configuration = LauncherConfigStore.load(context, installedApps)
+            configuration = withContext(Dispatchers.IO) {
+                LauncherConfigStore.load(context, installedApps)
+            }
             hasLoaded = true
         } else if (hasLoaded) {
-            configuration = LauncherConfigStore.sanitize(configuration, installedApps)
+            configuration = withContext(Dispatchers.IO) {
+                LauncherConfigStore.sanitize(configuration, installedApps)
+            }
         }
     }
 
@@ -254,11 +263,21 @@ internal fun rememberLauncherConfiguration(
 
 internal object LauncherConfigStore {
     private const val preferencesName = "ambient_launcher_sections"
-    private const val configKey = "launcher_configuration_v1"
+    private const val configKey = "launcher_configuration_v4" // Bumped: fixes Didi/X/aistudio placement + Xiaomi matcher
     private const val tileSizesKey = "tile_sizes_v1"
 
     fun load(context: Context, installedApps: List<AppInfo>): LauncherConfiguration {
         val prefs = context.getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
+        
+        // If v1/v2 exists but v3 doesn't, we are upgrading. Flush the old assignments and order.
+        if (!prefs.contains(configKey)) {
+             prefs.edit()
+                 .remove("launcher_configuration_v1")
+                 .remove("launcher_configuration_v2")
+                 .remove("bucket_order")
+                 .apply()
+        }
+
         val json = prefs.getString(configKey, null)
         val hiddenJson = prefs.getString("hidden_buckets", null)
         val collapsedJson = prefs.getString("collapsed_buckets", null)
@@ -266,7 +285,6 @@ internal object LauncherConfigStore {
         val titlesJson = prefs.getString("bucket_titles", null)
         val homeJson = prefs.getString("home_packages", null)
         val tileSizesJson = prefs.getString(tileSizesKey, null)
-        val briefingInstruction = prefs.getString("briefing_instruction", null)
         val rssSourcesJson = prefs.getString("rss_sources_v2", null)
 
         val rssSources = if (!rssSourcesJson.isNullOrBlank()) {
@@ -283,7 +301,7 @@ internal object LauncherConfigStore {
 
         val hiddenBuckets = hiddenJson?.parseSet { key ->
             LauncherBucket.entries.find { it.key == key }
-        } ?: emptySet()
+        } ?: setOf(LauncherBucket.SYSTEM_BLOAT, LauncherBucket.MISC)
 
         val collapsedBuckets = collapsedJson?.parseSet { key ->
             LauncherBucket.entries.find { it.key == key }
@@ -300,7 +318,10 @@ internal object LauncherConfigStore {
                 val array = JSONArray(orderJson)
                 val list = mutableListOf<LauncherBucket>()
                 for (i in 0 until array.length()) {
-                    LauncherBucket.entries.find { it.key == array.getString(i) }?.let(list::add)
+                    val key = array.getString(i)
+                    // Explicitly skip bloat and misc from ever entering the order list
+                    if (key == "bloat" || key == "misc") continue
+                    LauncherBucket.entries.find { it.key == key }?.let(list::add)
                 }
                 (list + LauncherBucket.indexBuckets.filterNot(list::contains)).distinct()
             }.getOrDefault(LauncherBucket.indexBuckets)
@@ -344,7 +365,6 @@ internal object LauncherConfigStore {
                 customTitles = if (!titlesJson.isNullOrBlank()) customTitles else seeded.customTitles,
                 homePackages = if (!homeJson.isNullOrBlank()) homePackages else seeded.homePackages,
                 tileSizes = if (!tileSizesJson.isNullOrBlank()) tileSizes else seeded.tileSizes,
-                briefingInstruction = briefingInstruction ?: seeded.briefingInstruction,
                 rssSources = rssSources ?: seeded.rssSources
             )
         } else {
@@ -355,16 +375,15 @@ internal object LauncherConfigStore {
                 }
                 val config = LauncherConfiguration(
                     assignments, hiddenBuckets, collapsedBuckets, bucketOrder, customTitles, homePackages, tileSizes,
-                    briefingInstruction = briefingInstruction ?: "Summarize these headlines into a single short, professional 'Vibe' or briefing sentence for a workstation home screen:",
                     rssSources = rssSources ?: defaultFeedSources.map { it.name to it.url }
                 )
                 if (LauncherBucket.entries.all { config.packagesFor(it).isEmpty() }) {
-                    reseedWith(installedApps, hiddenBuckets, hiddenJson, collapsedBuckets, collapsedJson, bucketOrder, orderJson, customTitles, titlesJson, homePackages, homeJson, tileSizes, tileSizesJson, briefingInstruction, rssSources)
+                    reseedWith(installedApps, hiddenBuckets, hiddenJson, collapsedBuckets, collapsedJson, bucketOrder, orderJson, customTitles, titlesJson, homePackages, homeJson, tileSizes, tileSizesJson, rssSources)
                 } else {
                     config
                 }
             }.getOrElse {
-                reseedWith(installedApps, hiddenBuckets, hiddenJson, collapsedBuckets, collapsedJson, bucketOrder, orderJson, customTitles, titlesJson, homePackages, homeJson, tileSizes, tileSizesJson, briefingInstruction, rssSources)
+                reseedWith(installedApps, hiddenBuckets, hiddenJson, collapsedBuckets, collapsedJson, bucketOrder, orderJson, customTitles, titlesJson, homePackages, homeJson, tileSizes, tileSizesJson, rssSources)
             }
         }
 
@@ -379,7 +398,6 @@ internal object LauncherConfigStore {
         customTitles: Map<LauncherBucket, String>, titlesJson: String?,
         homePackages: Set<String>, homeJson: String?,
         tileSizes: Map<String, TileSize>, tileSizesJson: String?,
-        briefingInstruction: String?,
         rssSources: List<Pair<String, String>>?
     ): LauncherConfiguration {
         val seeded = seedLauncherConfiguration(installedApps)
@@ -390,7 +408,6 @@ internal object LauncherConfigStore {
             customTitles = if (!titlesJson.isNullOrBlank()) customTitles else seeded.customTitles,
             homePackages = if (!homeJson.isNullOrBlank()) homePackages else seeded.homePackages,
             tileSizes = if (!tileSizesJson.isNullOrBlank()) tileSizes else seeded.tileSizes,
-            briefingInstruction = briefingInstruction ?: seeded.briefingInstruction,
             rssSources = rssSources ?: defaultFeedSources.map { it.name to it.url }
         )
     }
@@ -435,7 +452,6 @@ internal object LauncherConfigStore {
             .putString("bucket_titles", titlesRoot.toString())
             .putString("home_packages", homeArray.toString())
             .putString(tileSizesKey, tileSizesRoot.toString())
-            .putString("briefing_instruction", configuration.briefingInstruction)
             .putString("rss_sources_v2", rssSourcesArray.toString())
             .apply()
     }
@@ -478,20 +494,22 @@ private fun seedLauncherConfiguration(installedApps: List<AppInfo>): LauncherCon
 
     installedApps.forEach { app ->
         when {
-            matchesBrowsers(app)        -> assignments.getValue(LauncherBucket.BROWSERS).add(app.packageName)
-            matchesAi(app)              -> assignments.getValue(LauncherBucket.AI).add(app.packageName)
+            matchesSystemBloat(app)     -> assignments.getValue(LauncherBucket.SYSTEM_BLOAT).add(app.packageName)
+            matchesNews(app)            -> assignments.getValue(LauncherBucket.NEWS).add(app.packageName)
             matchesSecurity(app)        -> assignments.getValue(LauncherBucket.SECURITY).add(app.packageName)
+            matchesSocial(app)          -> assignments.getValue(LauncherBucket.SOCIAL).add(app.packageName)
+            matchesEntertainment(app)   -> assignments.getValue(LauncherBucket.ENTERTAINMENT).add(app.packageName)
+            matchesUtilities(app)       -> assignments.getValue(LauncherBucket.UTILITIES).add(app.packageName)
+            matchesAi(app)              -> assignments.getValue(LauncherBucket.AI).add(app.packageName)
+            matchesBrowsers(app)        -> assignments.getValue(LauncherBucket.BROWSERS).add(app.packageName)
+            matchesDev(app)             -> assignments.getValue(LauncherBucket.DEV).add(app.packageName)
             matchesWallet(app)          -> assignments.getValue(LauncherBucket.WALLET).add(app.packageName)
             matchesHealth(app)          -> assignments.getValue(LauncherBucket.HEALTH).add(app.packageName)
-            matchesNews(app)            -> assignments.getValue(LauncherBucket.NEWS).add(app.packageName)
-            matchesSocial(app)          -> assignments.getValue(LauncherBucket.SOCIAL).add(app.packageName)
             matchesDating(app)          -> assignments.getValue(LauncherBucket.DATING).add(app.packageName)
             matchesSmartHome(app)       -> assignments.getValue(LauncherBucket.SMART_HOME).add(app.packageName)
             matchesTransportDelivery(app) -> assignments.getValue(LauncherBucket.TRANSPORT_DELIVERY).add(app.packageName)
             matchesHardware(app)        -> assignments.getValue(LauncherBucket.HARDWARE).add(app.packageName)
             matchesTools(app)           -> assignments.getValue(LauncherBucket.TOOLS).add(app.packageName)
-            matchesSystemBloat(app)     -> assignments.getValue(LauncherBucket.SYSTEM_BLOAT).add(app.packageName)
-            matchesUtilities(app)       -> assignments.getValue(LauncherBucket.UTILITIES).add(app.packageName)
             else                        -> assignments.getValue(LauncherBucket.MISC).add(app.packageName)
         }
     }
@@ -521,7 +539,15 @@ private fun seedLauncherConfiguration(installedApps: List<AppInfo>): LauncherCon
 
 private fun matchesBrowsers(app: AppInfo): Boolean {
     val id = app.searchId
-    return listOf("browser", "chrome", "edge", "firefox", "brave", "vivaldi", "opera").any(id::contains)
+    // Specific browsers only; avoid generic "browser" or "edge" which catch bloat/tools
+    return listOf(
+        "com.android.chrome", "org.chromium.chrome",
+        "com.brave.browser", "com.vivaldi.browser",
+        "org.mozilla.firefox", "org.mozilla.focus",
+        "com.microsoft.emmx", // Microsoft Edge
+        "com.sec.android.app.sbrowser", // Samsung Internet
+        "com.opera.browser", "com.opera.mini.native"
+    ).any(id::contains) || (id.contains("browser") && !id.contains("adblock"))
 }
 
 private fun matchesAi(app: AppInfo): Boolean {
@@ -544,9 +570,11 @@ private fun matchesSecurity(app: AppInfo): Boolean {
         "commbank", "netbank",
         "ingdirect", "ing.direct", "ing banking",
         "bankwest", "westpac", "nab.", ".anz.", "up.bank",
-        "authenticator", "bitwarden", "1password", "aegis", "pass",
+        "revolut", "wise", "amex", "american.express",
+        "authenticator", "bitwarden", "1password", "aegis",
+        "password", ".pass.", "passkey",
         "duo mobile", "proton pass", "yubico",
-        "myid", "my.id", "mygov", "service.nsw", "serviceapp"
+        "myid", "my.id", "mygov", "service.nsw", "serviceapp", "nsw.gov"
     ).any(id::contains)
 }
 
@@ -555,7 +583,7 @@ private fun matchesWallet(app: AppInfo): Boolean {
     val id = app.searchId
     return listOf(
         "wallet", "google.android.apps.walletnfcrel",
-        "samsung.android.spay", "revolut", "wise", "amex"
+        "samsung.android.spay"
     ).any(id::contains)
 }
 
@@ -565,7 +593,8 @@ private fun matchesHealth(app: AppInfo): Boolean {
         "health", "fitness", "runna", "nike.run", "strava", "training",
         "cyclers", "cycling", "medad", "medadvisor",
         "myfitnesspal", "medicare", "medicar",
-        "garmin.android.apps.connectmobile"  // Garmin Connect
+        "garmin.android.apps.connectmobile",  // Garmin Connect
+        "swimup"
     ).any(id::contains)
 }
 
@@ -579,9 +608,6 @@ private fun matchesUtilities(app: AppInfo): Boolean {
         "samsung.android.dialer", "dialer",
         "samsung.android.messaging", "android.mms",
         "gmail", "google.android.gm",
-        "google.android.apps.maps",
-        "tripview", "opal.travel",
-        "amazon.shopping",
         "samsung.android.app.notes",
         "samsung.android.app.calendar", "calendar"
     ).any(id::contains)
@@ -591,11 +617,19 @@ private fun matchesUtilities(app: AppInfo): Boolean {
 private fun matchesSocial(app: AppInfo): Boolean {
     val id = app.searchId
     return listOf(
-        "whatsapp", ".orca",                        // Messenger
+        "whatsapp", ".orca", "facebook",             // Messenger / Facebook
         "telegram", "signal", "discord", "slack",
-        "twitter", "com.x.android", "instagram",
-        "google.android.apps.photos", "photos", "lightroom",
-        "skymee"
+        "instagram", "threads",
+        "google.android.apps.photos", "photos", "lightroom"
+    ).any(id::contains)
+}
+
+private fun matchesEntertainment(app: AppInfo): Boolean {
+    val id = app.searchId
+    return listOf(
+        "spotify", "music", "youtube", "netflix", "disney", "prime.video",
+        "hulu", "hbo", "twitch", "audible", "overdrive", "libby", "pocketcasts",
+        "podcast", "ted", "vimeo"
     ).any(id::contains)
 }
 
@@ -604,7 +638,12 @@ private fun matchesNews(app: AppInfo): Boolean {
     return listOf(
         "news", "ft.news", "com.ft", "financial.times",
         "guardian", "reuters", "ap.news", "apnews",
-        "ground.news", "inoreader", "bbc", "economist", "times"
+        "ground.news", "inoreader", "bbc", "economist", "times",
+        "nytimes", "cnn", "abc.news", "substack", "medium",
+        "daily.maverick", "elpais", "straitstimes", "timesofindia",
+        "nikkei", "scmp", "allafrica", "mercopress", "france24",
+        "dw.com", "nhk", "cbc.ca",
+        "twitter", "com.x.android", "x.android"
     ).any(id::contains)
 }
 
@@ -612,15 +651,28 @@ private fun matchesDating(app: AppInfo): Boolean {
     val id = app.searchId
     return listOf(
         "tinder", "bumble", "hinge", "feeld", "coffee.meets.bagel",
-        "cmb.", "dating"
+        "cmb.", "dating", "coffeemeetsbagel"
     ).any(id::contains)
+}
+
+private fun matchesDev(app: AppInfo): Boolean {
+    val id = app.searchId
+    return listOf(
+        "google.android.apps.cloudconsole", "github",
+        "tracker", "weighttracker", "weight.tracker", "com.checkitt"
+    ).any(id::contains)
+    // NOTE: bettercam intentionally removed — it belongs in Hardware, not Dev
 }
 
 private fun matchesSmartHome(app: AppInfo): Boolean {
     val id = app.searchId
     return listOf(
+        // TP-Link / Tapo
         "tapo", "tp.link",
-        "xiaomi.home", "mi.home", "miapp"
+        // Xiaomi Home — label match ("xiaomi home") and package matches
+        // Package is typically com.xiaomi.smarthome or com.mi.global.smarthome
+        "xiaomi home", "mi home",
+        "xiaomi.smarthome", "mi.global.smarthome", "xiaomi.miiotapp"
     ).any(id::contains)
 }
 
@@ -629,7 +681,7 @@ private fun matchesTransportDelivery(app: AppInfo): Boolean {
     return listOf(
         "waze", "didi", "uber", "doordash", "deliveroo",
         "opal.travel", "opal", "didi.chuxing",
-        "my.boost", "myboost"
+        "google.android.apps.maps", "tripview", "maps"
     ).any(id::contains)
 }
 
@@ -655,36 +707,47 @@ private fun matchesTools(app: AppInfo): Boolean {
         "playstore", "play.store", "vending",
         "recorder", "voice.recorder",
         "translate", "translation",
-        "tapo", "xiaomi.home"  // Smart home controls also in Tools
+        "clock", "skymee", "my.boost", "myboost", "amazon.shopping"
     ).any(id::contains)
 }
 
 private fun matchesSystemBloat(app: AppInfo): Boolean {
     val id = app.searchId
     return listOf(
-        // Samsung Internet tools
-        "abp.samsung", "adblock.samsung", "blockplus.samsung",
-        // Edge apps
-        "edge.gallery", "edge.touch",
-        // Samsung customization
-        "good.lock", "samsung.goodlock",
-        "theme.park", "theme",
-        "smart.switch", "smartswitch",
-        "sound.assistant",
+        // Adblockers and "Browsers" that aren't primary
+        "adblock", "abp.samsung", "blockplus.samsung", "betafish", "adblockplus",
+        // System utilities that should be hidden
+        "edge.touch", "samsung.android.app.edgetouch", "samsung.android.sidegesturepad",
+        "one.hand.operation", "onehanded", "samsung.android.displayassistant",
+        "reading.mode", "com.google.android.apps.accessibility.reader",
+        "good.lock", "samsung.goodlock", "homestar", "nice.catch", "nicecatch",
+        "camera.assistant", "samsung.android.app.cameraassistant",
+        "samsung.android.app.settings", "com.android.settings",
+        "com.google.android.apps.docs", "android.google.android.apps.docs", // Drive
+        "com.samsung.android.app.goodcatch",
+        "com.samsung.android.app.homestar",
+        // Samsung customization & duplicates
+        "theme.park", "theme", "samsung.android.themestore", "samsung.android.themecenter",
+        "smart.switch", "smartswitch", "sec.android.easyMover",
+        "sound.assistant", "samsung.android.soundassistant",
         "samsung.android.app.tips",
-        "reading.mode",
-        // Google duplicates
-        "google.android.apps.maps",  // when Google Maps installed
-        "google.android.gm",  // when Gmail not preferred
-        "google.android.apps.walletnfcrel",  // Google Wallet
-        "google.android.calendar",  // Google Calendar
-        "google.android.dialer",  // Google Phone
-        "google.android.apps.messaging",  // Google Messages
-        "com.google.android.googlequicksearchbox",  // Google search
-        // Samsung bloat
-        "nice.catch", "nicecatch", "nice.catch.samsung",
-        "smart.tutor", "smarttutor",
-        "samsung.android.app.settings"  // system settings bloat
+        "samsung.android.app.updatecenter",
+        "samsung.android.mobileservice",
+        "sec.android.app.samsungapps",
+        "sec.android.diagmonagent",
+        "samsung.android.app.dressroom",
+        "samsung.android.service.aircommand",
+        "samsung.android.bixby.agent",
+        "samsung.android.game.gamehome",
+        "samsung.android.app.smartcapture",
+        "samsung.android.kids",
+        "samsung.android.app.spage",
+        "samsung.android.app.contacts",
+        "samsung.android.calendar",
+        "samsung.android.video",
+        "samsung.android.app.sbrowser.beta",
+        "com.google.android.googlequicksearchbox",
+        "com.google.android.apps.tachyon" // Meet
     ).any(id::contains)
 }
 

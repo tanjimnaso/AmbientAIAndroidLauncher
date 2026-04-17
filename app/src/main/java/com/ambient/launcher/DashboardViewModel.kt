@@ -21,12 +21,15 @@ import androidx.lifecycle.viewModelScope
 import androidx.core.content.ContextCompat
 import com.ambient.launcher.home.AppInfo
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
@@ -49,12 +52,21 @@ data class RssFeedItem(
     val publishedAtEpochMillis: Long
 )
 
+data class ForecastDay(
+    val dayName: String,
+    val maxTemp: Int,
+    val minTemp: Int,
+    val weatherCode: Int
+)
+
 data class WeatherUiState(
     val temperatureText: String = "",
     val rangeText: String = "",
     val summary: String = "",
     val locationName: String = "",
-    val isAvailable: Boolean = false
+    val isAvailable: Boolean = false,
+    val currentCode: Int = 0,
+    val forecast: List<ForecastDay> = emptyList()
 )
 
 data class BatteryUiState(
@@ -91,16 +103,70 @@ internal val defaultFeedSources = listOf(
     // Wire services — authoritative, global, event-driven
     FeedSource("NYT World", "https://rss.nytimes.com/services/xml/rss/nyt/World.xml"),
     FeedSource("Al Jazeera", "https://www.aljazeera.com/xml/rss/all.xml"),
-    // Major broadcasters — world desk coverage
-    FeedSource("BBC World", "https://feeds.bbci.co.uk/news/world/rss.xml"),
-    FeedSource("BBC Technology", "https://feeds.bbci.co.uk/news/technology/rss.xml"),
-    FeedSource("The Guardian World", "https://www.theguardian.com/world/rss"),
+    FeedSource("AP Top News", "http://associated-press.s3-website-us-east-1.amazonaws.com/topnews.xml"), //
+    FeedSource("Reuters World", "https://fivefilters.org/reuters-world.xml"), //
+    // Global Sources
+    FeedSource("Global Voices Full site feed", "https://globalvoices.org/feed/" ),
+    FeedSource("The Straits Times All", "https://www.straitstimes.com/RSS-Feeds" ),
+    FeedSource("The Times of India Top Stories", "https://timesofindia.indiatimes.com/rss.cms" ),
+    FeedSource("Daily Maverick (South African Independent)", "https://www.dailymaverick.co.za/dmrss/" ),
+    FeedSource("El Pais English", "https://english.elpais.com/rss/" ),
+    FeedSource("The Age (Australia)", "https://www.theage.com.au/rssheadlines" ),
+    FeedSource("Nikkei Asia Business", "https://asia.nikkei.com/rss/Business"), // [15]
+    FeedSource("South China Morning Post", "https://www.scmp.com/rss/4/feed"), //
+    FeedSource("AllAfrica English", "https://allafrica.com/tools/headlines/rdf/latest/headlines.rdf"), //
+    FeedSource("MercoPress LatAm", "https://en.mercopress.com/rss/latin-america"), //
+    FeedSource("NYT World", "https://rss.nytimes.com/services/xml/rss/nyt/World.xml"),
+    FeedSource("France 24", "https://www.france24.com/en/rss"),
+    FeedSource("Deutsche Welle", "https://rss.dw.com/rdf/rss-en-all"),
+    FeedSource("NHK World", "https://www3.nhk.or.jp/nhkworld/en/news/"),
+    FeedSource("CBC World", "https://www.cbc.ca/cmlink/rss-world"),
     // Politics
     FeedSource("NPR News", "https://feeds.npr.org/1001/rss.xml"),
     FeedSource("Politico", "https://rss.politico.com/politics-news.xml"),
+    FeedSource("The Economist", "https://www.economist.com/latest/rss.xml"),
+    FeedSource("Foreign Policy", "https://foreignpolicy.com/feed/"),
+    FeedSource("CSIS Analysis", "https://www.csis.org/analysis/rss.xml"),
+    // === BUSINESS & ECONOMICS ===
+    FeedSource("Bloomberg", "https://www.bloomberg.com/feeds/markets"),
+    FeedSource("Project Syndicate", "https://www.project-syndicate.org/rss"),
     // Tech & science
     FeedSource("Ars Technica", "https://feeds.arstechnica.com/arstechnica/index"),
-    FeedSource("Hacker News", "https://hnrss.org/frontpage")
+    FeedSource("Hacker News", "https://hnrss.org/frontpage"),
+    FeedSource("MIT Technology Review", "https://www.technologyreview.com/feed/"), //
+    FeedSource("IEEE Spectrum Top", "https://spectrum.ieee.org/feeds/feed.rss"), //
+    FeedSource("Science Magazine", "https://www.science.org/rss/news_current.xml"), //
+    FeedSource("Quanta Magazine", "https://www.quantamagazine.org/feed/"),
+    FeedSource("The Conversation", "https://theconversation.com/articles.atom"),
+    FeedSource("Rest of World", "https://restofworld.org/feed/"),
+    // === ENVIRONMENT & CLIMATE ===
+    FeedSource("Carbon Brief", "https://www.carbonbrief.org/feed/"),
+    FeedSource("Mongabay", "https://news.mongabay.com/feed/"),
+    FeedSource("Yale Environment 360", "https://e360.yale.edu/feed.xml"),
+    // === CULTURE, IDEAS & LONGFORM ===
+    FeedSource("Aeon", "https://aeon.co/feed.rss"),
+    FeedSource("Psyche", "https://psyche.co/feed"),
+    FeedSource("Longreads", "https://longreads.com/feed/"),
+    FeedSource("Smithsonian", "https://www.smithsonianmag.com/rss/articles/"),
+    FeedSource("Open Culture", "https://www.openculture.com/feed"),
+    // === HUMANITIES & SOCIAL SCIENCE ===
+    FeedSource("Lapham's Quarterly", "https://www.laphamsquarterly.org/rss.xml"),
+    FeedSource("Public Domain Review", "https://publicdomainreview.org/feed/"),
+    // Health, & Wellness (Evidence-Based)
+    FeedSource("Mayo Clinic Research", "https://newsnetwork.mayoclinic.org/rss/research.xml"), // [36]
+    FeedSource("Harvard Health Blog", "https://www.health.harvard.edu/blog/feed"), // [53]
+    FeedSource("Stronger by Science", "https://sbspod.com/feed/"), // [41]
+    FeedSource("Science of Running", "http://feeds.feedburner.com/stevemagness"), //
+    FeedSource("iRunFar Trail", "https://www.irunfar.com/feed"), //
+    FeedSource("STAT News", "https://www.statnews.com/feed/"),
+    FeedSource("BMJ News", "https://www.bmj.com/rss.xml"),
+    FeedSource("Runner's World", "https://www.runnersworld.com/rss/all.xml"),
+    FeedSource("Greatist", "https://greatist.com/feed"),
+    FeedSource("Outside Magazine", "https://www.outsideonline.com/feed/"),
+    // Culinary Science & Precision Cooking
+    FeedSource("Serious Eats Latest", "https://www.seriouseats.com/atom.xml"), // [52]
+    FeedSource("ATK In the Test Kitchen", "https://megaphone.fm/feeds/americas-test-kitchen"), // [51]
+    FeedSource("Anova Culinary Blog", "https://anovaculinary.com/blogs/blog.atom") //
 )
 
 // ---------------------------------------------------------------------------
@@ -196,6 +262,9 @@ internal class DashboardViewModel(
     private val _feedItems = MutableStateFlow<List<RssFeedItem>>(emptyList())
     val feedItems: StateFlow<List<RssFeedItem>> = _feedItems.asStateFlow()
 
+    private val _lastFeedRefreshTime = MutableStateFlow(0L)
+    val lastFeedRefreshTime: StateFlow<Long> = _lastFeedRefreshTime.asStateFlow()
+
     // Dead feed URLs → replacement mappings.  Applied once on startup to migrate saved prefs.
     private val deadFeedReplacements = mapOf(
         "feeds.ap.org" to ("NYT World" to "https://rss.nytimes.com/services/xml/rss/nyt/World.xml"),
@@ -260,20 +329,24 @@ internal class DashboardViewModel(
     // level you unplugged at, not an assumed 100%.
     private var lastWasCharging = false
     private var batteryReceiver: BroadcastReceiver? = null
+    private val feedFetchSemaphore = Semaphore(8)
 
     companion object {
         // Measured discharge duration for this device: 29 hours 35 minutes.
         private const val TOTAL_DISCHARGE_HOURS = 29.583
         private const val PREFS_BATTERY = "battery_prefs"
         private const val KEY_RESET_PCT = "reset_pct"
+        // Max articles any single source can contribute to the final 30-item feed.
+        // Prevents high-frequency publishers (ABC, FT) from flooding the list.
+        private const val MAX_PER_SOURCE = 3
     }
 
     init {
         loadCachedFeeds()
         loadCachedWeather()
-        refreshFeeds()
         loadInstalledApps()
         initBatteryMonitoring()
+        refreshFeeds()
     }
 
     private fun initBatteryMonitoring() {
@@ -369,7 +442,7 @@ internal class DashboardViewModel(
 
         val usageStatsManager = appContext.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val endTime = System.currentTimeMillis()
-        val startTime = endTime - java.util.concurrent.TimeUnit.DAYS.toMillis(7) // Last 7 days
+        val startTime = endTime - java.util.concurrent.TimeUnit.DAYS.toMillis(3) // Last 3 days
 
         val stats = usageStatsManager.queryAndAggregateUsageStats(startTime, endTime)
         
@@ -396,30 +469,50 @@ internal class DashboardViewModel(
 
     fun refreshFeeds() {
         viewModelScope.launch(Dispatchers.IO) {
-            val jobs = currentSources.map { (name, url) ->
-                async { fetchFeedItems(FeedSource(name, url.trim())) }
-            }
-
             val cutoffMillis = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(48)
+            val channel = Channel<List<RssFeedItem>>(capacity = Channel.UNLIMITED)
 
-            val filtered = jobs.awaitAll()
-                .asSequence()
-                .flatten()
-                .filter { it.publishedAtEpochMillis > 0L }
-                .filter { it.publishedAtEpochMillis >= cutoffMillis }
-                .filter { FeedFilter.shouldInclude(it) }
-                .sortedByDescending { it.publishedAtEpochMillis }
-                .toList()
-            // Dedup needs full list (Jaccard pairwise), so materialize first
-            val fetchedItems = FeedDeduplicator.deduplicate(filtered)
-                .distinctBy { it.url }
-
-            if (fetchedItems.isNotEmpty()) {
-                val limitedItems = fetchedItems.take(30)
-                saveCachedFeeds(limitedItems)
-                _feedItems.value = limitedItems
+            val jobs = currentSources.map { (name, url) ->
+                async {
+                    val items = feedFetchSemaphore.withPermit {
+                        fetchFeedItems(FeedSource(name, url.trim()))
+                    }
+                    channel.send(items)
+                }
             }
+            // Close channel once every source has responded (or timed out)
+            launch { jobs.awaitAll(); channel.close() }
+
+            // Stream: update the feed as each source arrives rather than waiting for all 55
+            val accumulator = mutableListOf<RssFeedItem>()
+            for (incoming in channel) {
+                if (incoming.isEmpty()) continue
+                accumulator.addAll(incoming)
+                val processed = buildFreshFeed(accumulator, cutoffMillis)
+                if (processed.isNotEmpty()) {
+                    _feedItems.value = processed
+                    _lastFeedRefreshTime.value = System.currentTimeMillis()
+                }
+            }
+
+            // Persist the final settled feed to cache
+            val final = _feedItems.value
+            if (final.isNotEmpty()) saveCachedFeeds(final)
         }
+    }
+
+    private fun buildFreshFeed(raw: List<RssFeedItem>, cutoffMillis: Long): List<RssFeedItem> {
+        val filtered = raw
+            .filter { it.publishedAtEpochMillis > 0L }
+            .filter { it.publishedAtEpochMillis >= cutoffMillis }
+            .filter { FeedFilter.shouldInclude(it) }
+            .sortedByDescending { it.publishedAtEpochMillis }
+        val deduped = FeedDeduplicator.deduplicate(filtered).distinctBy { it.url }
+        val counts = mutableMapOf<String, Int>()
+        return deduped.filter { item ->
+            val n = counts.getOrDefault(item.source, 0)
+            (n < MAX_PER_SOURCE).also { if (it) counts[item.source] = n + 1 }
+        }.take(30)
     }
 
     fun addFeedSource(name: String, url: String) {
@@ -571,8 +664,8 @@ internal class DashboardViewModel(
             append("latitude=$latitude")
             append("&longitude=$longitude")
             append("&current=temperature_2m,weather_code")
-            append("&daily=temperature_2m_max,temperature_2m_min")
-            append("&forecast_days=1")
+            append("&daily=temperature_2m_max,temperature_2m_min,weather_code")
+            append("&forecast_days=4")
             append("&timezone=auto")
         }
 
@@ -594,32 +687,67 @@ internal class DashboardViewModel(
                 val temp = current.getDouble("temperature_2m").toInt()
                 val code = current.getInt("weather_code")
                 
-                val maxTemp = daily.getJSONArray("temperature_2m_max").getDouble(0).toInt()
-                val minTemp = daily.getJSONArray("temperature_2m_min").getDouble(0).toInt()
+                val maxTemps = daily.getJSONArray("temperature_2m_max")
+                val minTemps = daily.getJSONArray("temperature_2m_min")
+                val weatherCodes = daily.getJSONArray("weather_code")
+                val timeArray = daily.getJSONArray("time")
+
+                val forecast = mutableListOf<ForecastDay>()
+                // Today is index 0, so next 3 days are 1, 2, 3
+                for (i in 1 until 4) {
+                    val date = java.time.LocalDate.parse(timeArray.getString(i))
+                    forecast.add(
+                        ForecastDay(
+                            dayName = date.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.ENGLISH),
+                            maxTemp = maxTemps.getDouble(i).toInt(),
+                            minTemp = minTemps.getDouble(i).toInt(),
+                            weatherCode = weatherCodes.getInt(i)
+                        )
+                    )
+                }
 
                 WeatherUiState(
                     temperatureText = "$temp°",
-                    rangeText = "H:$maxTemp° L:$minTemp°",
+                    rangeText = "H:${maxTemps.getDouble(0).toInt()}° L:${minTemps.getDouble(0).toInt()}°",
                     summary = weatherCodeToSummary(code),
                     locationName = locationName,
-                    isAvailable = true
+                    isAvailable = true,
+                    currentCode = code,
+                    forecast = forecast
                 )
             }
         }.getOrNull()
     }
 
     private fun loadCachedWeather() {
-        val json = sharedPreferences.getString("weather_v1", null).orEmpty()
+        val json = sharedPreferences.getString("weather_v2", null).orEmpty()
         if (json.isBlank()) return
 
         runCatching {
             val obj = JSONObject(json)
+            val forecastArray = obj.optJSONArray("forecast")
+            val forecast = mutableListOf<ForecastDay>()
+            if (forecastArray != null) {
+                for (i in 0 until forecastArray.length()) {
+                    val f = forecastArray.getJSONObject(i)
+                    forecast.add(
+                        ForecastDay(
+                            f.getString("dayName"),
+                            f.getInt("maxTemp"),
+                            f.getInt("minTemp"),
+                            f.getInt("weatherCode")
+                        )
+                    )
+                }
+            }
             _weather.value = WeatherUiState(
                 temperatureText = obj.getString("temperatureText"),
                 rangeText = obj.getString("rangeText"),
                 summary = obj.getString("summary"),
                 locationName = obj.getString("locationName"),
-                isAvailable = obj.getBoolean("isAvailable")
+                isAvailable = obj.getBoolean("isAvailable"),
+                currentCode = obj.optInt("currentCode", 0),
+                forecast = forecast
             )
         }
     }
@@ -631,8 +759,20 @@ internal class DashboardViewModel(
             put("summary", weather.summary)
             put("locationName", weather.locationName)
             put("isAvailable", weather.isAvailable)
+            put("currentCode", weather.currentCode)
+            
+            val forecastArray = JSONArray()
+            weather.forecast.forEach { f ->
+                forecastArray.put(JSONObject().apply {
+                    put("dayName", f.dayName)
+                    put("maxTemp", f.maxTemp)
+                    put("minTemp", f.minTemp)
+                    put("weatherCode", f.weatherCode)
+                })
+            }
+            put("forecast", forecastArray)
         }.toString()
-        sharedPreferences.edit().putString("weather_v1", json).apply()
+        sharedPreferences.edit().putString("weather_v2", json).apply()
     }
 
     private fun loadCachedFeeds() {

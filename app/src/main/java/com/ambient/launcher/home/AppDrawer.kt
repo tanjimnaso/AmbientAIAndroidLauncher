@@ -44,7 +44,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -262,6 +264,7 @@ private fun AppLibraryRowShell(
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             val iconBitmap = rememberAppIcon(packageName = app.packageName)
+            val bucketColor = app.bucket.themeColor(AmbientTheme.palette)
             Box(modifier = Modifier.size(64.dp)) {
                 iconBitmap?.let {
                     Image(
@@ -269,7 +272,8 @@ private fun AppLibraryRowShell(
                         contentDescription = app.label,
                         modifier = Modifier
                             .size(64.dp)
-                            .clip(RoundedCornerShape(16.dp))
+                            .clip(RoundedCornerShape(16.dp)),
+                        colorFilter = getAmbientIconFilter(bucketColor)
                     )
                 }
             }
