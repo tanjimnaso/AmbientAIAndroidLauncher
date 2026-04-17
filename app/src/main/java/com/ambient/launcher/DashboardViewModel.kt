@@ -106,12 +106,12 @@ internal val defaultFeedSources = listOf(
     FeedSource("AP Top News", "http://associated-press.s3-website-us-east-1.amazonaws.com/topnews.xml"), //
     FeedSource("Reuters World", "https://fivefilters.org/reuters-world.xml"), //
     // Global Sources
-    FeedSource("Global Voices Full site feed", "https://globalvoices.org/feed/" ),
-    FeedSource("The Straits Times All", "https://www.straitstimes.com/RSS-Feeds" ),
-    FeedSource("The Times of India Top Stories", "https://timesofindia.indiatimes.com/rss.cms" ),
-    FeedSource("Daily Maverick (South African Independent)", "https://www.dailymaverick.co.za/dmrss/" ),
+    FeedSource("Global Voices", "https://globalvoices.org/feed/" ),
+    FeedSource("The Straits Times", "https://www.straitstimes.com/RSS-Feeds" ),
+    FeedSource("The Times of India", "https://timesofindia.indiatimes.com/rss.cms" ),
+    FeedSource("Daily Maverick", "https://www.dailymaverick.co.za/dmrss/" ),
     FeedSource("El Pais English", "https://english.elpais.com/rss/" ),
-    FeedSource("The Age (Australia)", "https://www.theage.com.au/rssheadlines" ),
+    FeedSource("The Age Australia", "https://www.theage.com.au/rssheadlines" ),
     FeedSource("Nikkei Asia Business", "https://asia.nikkei.com/rss/Business"), // [15]
     FeedSource("South China Morning Post", "https://www.scmp.com/rss/4/feed"), //
     FeedSource("AllAfrica English", "https://allafrica.com/tools/headlines/rdf/latest/headlines.rdf"), //
@@ -264,6 +264,9 @@ internal class DashboardViewModel(
 
     private val _lastFeedRefreshTime = MutableStateFlow(0L)
     val lastFeedRefreshTime: StateFlow<Long> = _lastFeedRefreshTime.asStateFlow()
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
     // Dead feed URLs → replacement mappings.  Applied once on startup to migrate saved prefs.
     private val deadFeedReplacements = mapOf(
@@ -468,51 +471,98 @@ internal class DashboardViewModel(
     }
 
     fun refreshFeeds() {
+        if (_isRefreshing.value) return
+        _isRefreshing.value = true
         viewModelScope.launch(Dispatchers.IO) {
-            val cutoffMillis = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(48)
-            val channel = Channel<List<RssFeedItem>>(capacity = Channel.UNLIMITED)
+            try {
+                val channel = Channel<List<RssFeedItem>>(capacity = Channel.UNLIMITED)
 
-            val jobs = currentSources.map { (name, url) ->
-                async {
-                    val items = feedFetchSemaphore.withPermit {
-                        fetchFeedItems(FeedSource(name, url.trim()))
+                val jobs = currentSources.map { (name, url) ->
+                    async {
+                        val items = feedFetchSemaphore.withPermit {
+                            fetchFeedItems(FeedSource(name, url.trim()))
+                        }
+                        channel.send(items)
                     }
-                    channel.send(items)
                 }
-            }
-            // Close channel once every source has responded (or timed out)
-            launch { jobs.awaitAll(); channel.close() }
+                // Close channel once every source has responded (or timed out)
+                launch { jobs.awaitAll(); channel.close() }
 
-            // Stream: update the feed as each source arrives rather than waiting for all 55
-            val accumulator = mutableListOf<RssFeedItem>()
-            for (incoming in channel) {
-                if (incoming.isEmpty()) continue
-                accumulator.addAll(incoming)
-                val processed = buildFreshFeed(accumulator, cutoffMillis)
-                if (processed.isNotEmpty()) {
-                    _feedItems.value = processed
-                    _lastFeedRefreshTime.value = System.currentTimeMillis()
+                // Stream: update the feed as each source arrives rather than waiting for all 55
+                for (incoming in channel) {
+                    if (incoming.isEmpty()) continue
+                    
+                    // Merge incoming items with current state so fast sources populate immediately
+                    // and new items naturally rise to the top
+                    val currentList = _feedItems.value
+                    val combined = currentList + incoming
+                    val processed = buildFreshFeed(combined)
+                    
+                    if (processed.isNotEmpty()) {
+                        _feedItems.value = processed
+                        _lastFeedRefreshTime.value = System.currentTimeMillis()
+                    }
                 }
-            }
 
-            // Persist the final settled feed to cache
-            val final = _feedItems.value
-            if (final.isNotEmpty()) saveCachedFeeds(final)
+                // Persist the final settled feed to cache
+                val final = _feedItems.value
+                if (final.isNotEmpty()) saveCachedFeeds(final)
+            } finally {
+                _isRefreshing.value = false
+            }
         }
     }
 
-    private fun buildFreshFeed(raw: List<RssFeedItem>, cutoffMillis: Long): List<RssFeedItem> {
+    private fun buildFreshFeed(raw: List<RssFeedItem>): List<RssFeedItem> {
+        val now = System.currentTimeMillis()
+        val strictCutoff = now - TimeUnit.HOURS.toMillis(48)
+        val relaxedCutoff = now - TimeUnit.DAYS.toMillis(14) // 2 weeks for slow publishers
+
+        // 1. Initial filter & deduplication
         val filtered = raw
             .filter { it.publishedAtEpochMillis > 0L }
-            .filter { it.publishedAtEpochMillis >= cutoffMillis }
+            .filter { it.publishedAtEpochMillis >= relaxedCutoff }
             .filter { FeedFilter.shouldInclude(it) }
             .sortedByDescending { it.publishedAtEpochMillis }
+            
         val deduped = FeedDeduplicator.deduplicate(filtered).distinctBy { it.url }
-        val counts = mutableMapOf<String, Int>()
-        return deduped.filter { item ->
-            val n = counts.getOrDefault(item.source, 0)
-            (n < MAX_PER_SOURCE).also { if (it) counts[item.source] = n + 1 }
-        }.take(30)
+
+        // 2. Group by source
+        // Since 'deduped' is already sorted chronologically, the lists inside this map 
+        // will also be correctly ordered newest-to-oldest per source.
+        val bySource = deduped.groupBy { it.source }
+
+        val finalSelection = mutableListOf<RssFeedItem>()
+        var depth = 0
+
+        // 3. Round-robin allocation
+        // Pick the 1st story from every source, then the 2nd, up to MAX_PER_SOURCE
+        while (finalSelection.size < 30 && depth < MAX_PER_SOURCE && bySource.values.any { it.size > depth }) {
+            val candidates = bySource.values
+                .mapNotNull { itemsForSource ->
+                    val item = itemsForSource.getOrNull(depth) ?: return@mapNotNull null
+                    
+                    // The #1 newest story (depth 0) uses the relaxed 14-day cutoff.
+                    // The #2 and #3 stories must pass the strict 48-hour cutoff.
+                    if (depth == 0 || item.publishedAtEpochMillis >= strictCutoff) {
+                        item
+                    } else {
+                        null
+                    }
+                }
+                // Sort candidates at this depth chronologically (freshest first)
+                // This ensures if we hit the 30-item limit mid-cycle, we drop the oldest sources
+                .sortedByDescending { it.publishedAtEpochMillis }
+
+            for (item in candidates) {
+                if (finalSelection.size >= 30) break
+                finalSelection.add(item)
+            }
+            depth++
+        }
+
+        // 4. Final chronological sort for the UI presentation
+        return finalSelection.sortedByDescending { it.publishedAtEpochMillis }
     }
 
     fun addFeedSource(name: String, url: String) {
@@ -776,6 +826,11 @@ internal class DashboardViewModel(
     }
 
     private fun loadCachedFeeds() {
+        // Implement Cache TTL (15 minutes) to prevent staring at stale data
+        val expiry = 15 * 60 * 1000L
+        val cacheTime = sharedPreferences.getLong("feed_items_timestamp_v1", 0L)
+        if (System.currentTimeMillis() - cacheTime > expiry) return
+
         val json = sharedPreferences.getString("feed_items_v1", null).orEmpty()
         if (json.isBlank()) return
 
@@ -815,7 +870,10 @@ internal class DashboardViewModel(
                 }
             )
         }
-        sharedPreferences.edit().putString("feed_items_v1", array.toString()).apply()
+        sharedPreferences.edit()
+            .putString("feed_items_v1", array.toString())
+            .putLong("feed_items_timestamp_v1", System.currentTimeMillis())
+            .apply()
     }
 
     @SuppressLint("MissingPermission")

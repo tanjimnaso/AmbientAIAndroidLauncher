@@ -273,93 +273,51 @@ internal fun AiBriefingSection(
     }
 }
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 internal fun HeadlinesSection(
     feedItems: List<RssFeedItem>,
+    isRefreshing: Boolean,
     lastRefreshTime: Long = 0L,
     onFeedClick: (RssFeedItem) -> Unit,
     modifier: Modifier = Modifier,
     onRefresh: (() -> Unit)? = null
 ) {
-    val density = LocalDensity.current
-    // Pull-to-refresh: track how far the user has over-pulled past the top.
-    // We use a NestedScrollConnection on the outer Column — the inner verticalScroll
-    // can't consume downward drag when already at position 0, so the leftover delta
-    // flows back up to us via onPostScroll (available.y > 0).
-    var pullOffsetPx by remember { mutableStateOf(0f) }
-    val triggerPx    = with(density) { 64.dp.toPx() }
-
-    val pullRefreshConnection = remember(onRefresh) {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                // Collapse the pull indicator when scrolling back up
-                if (pullOffsetPx > 0f && available.y < 0f) {
-                    val consumed = maxOf(available.y, -pullOffsetPx)
-                    pullOffsetPx += consumed
-                    return Offset(0f, consumed)
-                }
-                return Offset.Zero
-            }
-            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-                if (available.y > 0f && onRefresh != null) {
-                    pullOffsetPx = (pullOffsetPx + available.y).coerceAtMost(triggerPx * 1.5f)
-                }
-                return Offset.Zero
-            }
-            override suspend fun onPreFling(available: Velocity): Velocity {
-                if (pullOffsetPx >= triggerPx) onRefresh?.invoke()
-                pullOffsetPx = 0f
-                return Velocity.Zero
-            }
-        }
-    }
-
-    Column(modifier = modifier.fillMaxWidth().nestedScroll(pullRefreshConnection)) {
-        // Pull indicator — a subtle arrow/text that fades in as you pull
-        if (pullOffsetPx > 0f) {
-            val indicatorAlpha = (pullOffsetPx / triggerPx).coerceIn(0f, 1f)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(with(density) { (pullOffsetPx / 2f).toDp().coerceAtMost(32.dp) }),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text  = if (pullOffsetPx >= triggerPx) "↑ Release to refresh" else "↓ Pull to refresh",
-                    style = ResponsiveTypography.t3,
-                    color = AmbientTheme.palette.textSecondary.copy(alpha = indicatorAlpha * 0.6f)
-                )
-            }
-        }
-
-        if (feedItems.isEmpty()) {
-            HeadlineItem(
-                source = "",
-                title  = "Aggregating latest intelligence...",
-                onClick = null
-            )
-            TimestampFooter(lastRefreshTime)
-            return@Column
-        }
-
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .widthIn(max = 640.dp),
-            contentPadding = PaddingValues(vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(40.dp)
-        ) {
-            items(feedItems, key = { it.url }) { item ->
+    androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = { onRefresh?.invoke() },
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            if (feedItems.isEmpty()) {
                 HeadlineItem(
-                    source = item.source,
-                    title = item.title,
-                    publishedAtEpochMillis = item.publishedAtEpochMillis,
-                    onClick = { onFeedClick(item) }
+                    source = "",
+                    title  = "Aggregating latest intelligence...",
+                    onClick = null
                 )
+                TimestampFooter(lastRefreshTime)
+                return@Column
             }
-            item { Spacer(Modifier.height(8.dp)) }
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .widthIn(max = 640.dp),
+                contentPadding = PaddingValues(vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(40.dp)
+            ) {
+                items(feedItems, key = { it.url }) { item ->
+                    HeadlineItem(
+                        source = item.source,
+                        title = item.title,
+                        publishedAtEpochMillis = item.publishedAtEpochMillis,
+                        onClick = { onFeedClick(item) }
+                    )
+                }
+                item { Spacer(Modifier.height(8.dp)) }
+            }
+            TimestampFooter(lastRefreshTime)
         }
-        TimestampFooter(lastRefreshTime)
     }
 }
 
@@ -396,7 +354,7 @@ private fun HeadlineItem(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.Top
         ) {
             if (source.isNotBlank()) {
                 Text(
@@ -404,7 +362,8 @@ private fun HeadlineItem(
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.2.sp,
-                    color = getSourceColor(source).copy(alpha = 0.85f)
+                    color = getSourceColor(source).copy(alpha = 0.85f),
+                    modifier = Modifier.weight(1f)
                 )
             }
             if (publishedAtEpochMillis > 0L) {
@@ -412,7 +371,10 @@ private fun HeadlineItem(
                     text = formatElapsed(publishedAtEpochMillis),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Normal,
-                    color = AmbientTheme.palette.textPrimary.copy(alpha = 0.4f)
+                    color = AmbientTheme.palette.textPrimary.copy(alpha = 0.4f),
+                    modifier = Modifier.padding(start = 8.dp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Visible
                 )
             }
         }

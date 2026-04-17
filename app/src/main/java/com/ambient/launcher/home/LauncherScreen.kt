@@ -67,6 +67,7 @@ internal fun LauncherScreen(
     // ── State collection ──────────────────────────────────────────────────────
     val feedItems          by dashboardViewModel.feedItems.collectAsStateWithLifecycle()
     val lastFeedRefreshTime by dashboardViewModel.lastFeedRefreshTime.collectAsStateWithLifecycle()
+    val isFeedRefreshing   by dashboardViewModel.isRefreshing.collectAsStateWithLifecycle()
     val weather            by dashboardViewModel.weather.collectAsStateWithLifecycle()
     val battery            by dashboardViewModel.batteryState.collectAsStateWithLifecycle()
     val briefing           by briefingViewModel.briefing.collectAsStateWithLifecycle()
@@ -203,6 +204,7 @@ internal fun LauncherScreen(
                     isAnalysisReady      = isAnalysisReady,
                     analysisHasError     = analysisHasError,
                     feedItems            = feedItems,
+                    isRefreshing         = isFeedRefreshing,
                     lastFeedRefreshTime  = lastFeedRefreshTime,
                     onRefresh            = {
                         // Pull-to-refresh only refreshes the feed — briefing stays on its
@@ -330,6 +332,7 @@ private fun LeftNewsPage(
     isAnalysisReady: Boolean,
     analysisHasError: Boolean,
     feedItems: List<RssFeedItem>,
+    isRefreshing: Boolean,
     lastFeedRefreshTime: Long,
     onRefresh: () -> Unit,
     onOpenCloudNotifications: () -> Unit,
@@ -381,6 +384,7 @@ private fun LeftNewsPage(
         ) {
             HeadlinesSection(
                 feedItems       = feedItems,
+                isRefreshing    = isRefreshing,
                 lastRefreshTime = lastFeedRefreshTime,
                 onFeedClick     = onFeedClick,
                 onRefresh       = onRefresh,
