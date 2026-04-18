@@ -65,18 +65,24 @@ object ReadingModeParser {
 
         val body = doc.select("article").firstOrNull()
             ?: doc.select("main").firstOrNull()
-            ?: doc.select("[class*=content], [class*=article-body]").firstOrNull()
+            ?: doc.select("[class*=article-body], [class*=article__body]").firstOrNull()
+            ?: doc.select("[class*=essay-body], [class*=essay__body]").firstOrNull()
+            ?: doc.select("[class*=post-content], [class*=entry-content]").firstOrNull()
+            ?: doc.select("[class*=story-body], [class*=page-content]").firstOrNull()
+            ?: doc.select("[class*=content]").firstOrNull()
             ?: doc.select("body").first()
 
         val paragraphs = body?.select("p")
             ?.map { it.text() }
             ?.filter { text ->
-                text.length > 20 &&
+                text.length > 30 &&
                 !text.contains("Cookie", ignoreCase = true) &&
                 !text.contains("Subscribe", ignoreCase = true) &&
-                !text.contains("JavaScript", ignoreCase = true)
+                !text.contains("JavaScript", ignoreCase = true) &&
+                !text.contains("sign up", ignoreCase = true) &&
+                !text.contains("newsletter", ignoreCase = true)
             }
-            ?.take(50)
+            ?.take(60)
             ?: emptyList()
 
         return ArticleContent(

@@ -39,7 +39,7 @@ android {
         buildConfigField(
             "String",
             "GEMINI_MODEL",
-            "\"${localProperties.getProperty("geminiModel", "gemini-1.5-flash").escapeForBuildConfig()}\""
+            "\"${localProperties.getProperty("geminiModel", "gemini-2.0-flash").escapeForBuildConfig()}\""
         )
     }
 

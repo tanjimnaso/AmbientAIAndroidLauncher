@@ -260,7 +260,7 @@ internal fun AiBriefingSection(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(end = 28.dp, top = 10.dp),
+                .padding(end = 28.dp, top = 6.dp),
             horizontalArrangement = Arrangement.End
         ) {
             Text(
@@ -303,8 +303,8 @@ internal fun HeadlinesSection(
                 modifier = Modifier
                     .fillMaxSize()
                     .widthIn(max = 640.dp),
-                contentPadding = PaddingValues(vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(40.dp)
+                contentPadding = PaddingValues(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 items(feedItems, key = { it.url }) { item ->
                     HeadlineItem(
@@ -347,8 +347,8 @@ private fun HeadlineItem(
         modifier = modifier
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 28.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .padding(start = 28.dp, end = 100.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         // Kicker row: source (left) + timestamp (right)
         Row(
@@ -383,7 +383,7 @@ private fun HeadlineItem(
         Text(
             text = title,
             fontSize = 19.sp,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Normal,
             lineHeight = 25.sp,
             color = AmbientTheme.palette.textPrimary,
             overflow = TextOverflow.Ellipsis

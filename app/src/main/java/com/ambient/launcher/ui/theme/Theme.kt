@@ -22,15 +22,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
 import kotlinx.coroutines.delay
 import java.time.LocalTime
 
+// Ambient mode: pure lux + time-of-day automatic resolution
 enum class AmbientMode {
-    EARLY_MORNING,
-    DAY,
-    BLUE_HOUR,
-    READING
+    DAYLIGHT_LIGHT,      // 200+ lux, Light mode (white bg, black text)
+    DAYLIGHT_READING,    // 200+ lux, Reading mode (off-blue bg, off-white text)
+    INDOOR_LIGHT,        // 10-100 lux, Light mode (yellow bg, black text)
+    INDOOR_READING,      // 10-100 lux, Reading mode (dark grey bg, off-white text)
+    LOWGLARE             // 0-10 lux, forced (black bg, low-brightness off-white)
 }
 
 data class AmbientPalette(
@@ -78,188 +79,218 @@ private data class AmbientThemeTokens(
     val palette: AmbientPalette
 )
 
-// Earthy, Muted Palettes
-private val EarthySurface = Color(0xFF1C1B1A)
-private val EarthyInk = Color(0xFF141312)
-private val MutedClay = Color(0xFF3D3A36)
-private val MutedSage = Color(0xFF4A4D45)
-private val MutedOchre = Color(0xFF6B6458)
-private val MutedText = Color(0xFFD6D3CD)
-private val MutedAccent = Color(0xFFB8A690)
-
-// Atom One Dark (bright light at night / early dawn): crisp, IDE-calm navy
-private val EarlyMorningColorScheme = darkColorScheme(
-    primary = Color(0xFF61AFEF),   // Atom blue
-    secondary = Color(0xFFABB2BF),
-    tertiary = Color(0xFF98C379),  // Atom green
-    background = Color(0xFF21252B),
-    surface = Color(0xFF282C34),
-    onBackground = Color(0xFFABB2BF),
-    onSurface = Color(0xFFABB2BF)
+// ── DAYLIGHT_LIGHT: White background, black text (high contrast daytime) ──
+private val DaylightLightColorScheme = lightColorScheme(
+    primary = Color(0xFF1F2937),      // Dark grey (high contrast)
+    secondary = Color(0xFF4B5563),
+    tertiary = Color(0xFF065F73),
+    background = Color(0xFFFFFFFF),   // Pure white
+    surface = Color(0xFFF3F4F6),       // Off-white
+    onBackground = Color(0xFF111827),  // Nearly black
+    onSurface = Color(0xFF111827)
 )
 
-// Atom One Dark (IDE-inspired): deep navy, cool-tinted, high readability
-private val BlueHourColorScheme = darkColorScheme(
-    primary = Color(0xFF61AFEF),   // Atom blue
-    secondary = Color(0xFFABB2BF), // Atom text grey
-    tertiary = Color(0xFF98C379),  // Atom green
-    background = Color(0xFF21252B),
-    surface = Color(0xFF282C34),
-    onBackground = Color(0xFFABB2BF),
-    onSurface = Color(0xFFABB2BF)
+// ── DAYLIGHT_READING: Off-blue background, off-white text (Gemini-like, reduced contrast) ──
+private val DaylightReadingColorScheme = lightColorScheme(
+    primary = Color(0xFF1E40AF),      // Deep blue
+    secondary = Color(0xFF3B82F6),    // Medium blue
+    tertiary = Color(0xFF7C3AED),     // Purple
+    background = Color(0xFFF0F4F8),   // Off-blue (very light)
+    surface = Color(0xFFE0E7FF),       // Light blue tint
+    onBackground = Color(0xFF374151), // Slate grey (reduced contrast)
+    onSurface = Color(0xFF4B5563)
 )
 
-// Warm Earthy Night (dark ambient, any time): cozy, warm dark for reading in the dark
-private val ReadingColorScheme = darkColorScheme(
-    primary = Color(0xFFD4A574),   // Warm rose-gold
-    secondary = Color(0xFFE8E5DC),
-    tertiary = Color(0xFFC89B6F),
-    background = EarthyInk,
-    surface = EarthySurface,
-    onBackground = Color(0xFFE8E5DC),
-    onSurface = Color(0xFFE8E5DC)
+// ── INDOOR_LIGHT: Warm yellow background, black text ──
+private val IndoorLightColorScheme = lightColorScheme(
+    primary = Color(0xFF92400E),      // Warm brown
+    secondary = Color(0xFFA16207),
+    tertiary = Color(0xFF7C2D12),
+    background = Color(0xFFFFFBEB),   // Soft warm cream-yellow
+    surface = Color(0xFFFEF3C7),       // Light yellow
+    onBackground = Color(0xFF78350F),  // Dark brown
+    onSurface = Color(0xFF78350F)
 )
 
-// Quiet Light (VSCode-inspired): warm cream, low contrast, easy on eyes
-private val DayColorScheme = lightColorScheme(
-    primary = Color(0xFF7A5C3E),   // Warm brown
-    secondary = Color(0xFF5C6E5B), // Muted sage green
-    tertiary = Color(0xFF7D5A7A),  // Dusty mauve
-    background = Color(0xFFF5F0E8),
-    surface = Color(0xFFEDE8DC),
-    onBackground = Color(0xFF3D3530),
-    onSurface = Color(0xFF3D3530)
+// ── INDOOR_READING: Dark grey background, off-white text ──
+private val IndoorReadingColorScheme = darkColorScheme(
+    primary = Color(0xFF93C5FD),      // Light blue
+    secondary = Color(0xFFA5B4FC),    // Light purple
+    tertiary = Color(0xFF86EFAC),     // Light green
+    background = Color(0xFF1F2937),   // Dark grey
+    surface = Color(0xFF2D3748),       // Slightly lighter grey
+    onBackground = Color(0xFFF3F4F6), // Off-white
+    onSurface = Color(0xFFE5E7EB)
 )
 
-// ── Atom One Dark Palette (bright light before 7:30 / late night lamp): IDE navy ──
-private val EarlyMorningPalette = AmbientPalette(
-    wallpaperScrimTop = Color(0x9921252B),
-    wallpaperScrimMid = Color(0xCC21252B),
-    wallpaperScrimBottom = Color(0xF221252B),
-    wallpaperGlow = Color(0x1261AFEF),
-    panel = Color(0xFF2C313A),
-    elevatedPanel = Color(0xFF333841),
-    searchPanel = Color(0xFF1C2026),
-    drawerBackground = Color(0xFF21252B),
-    chipBackground = Color(0xFF353B45),
-    closeButtonContainer = Color(0xFF2C313A),
-    accentHalo = Color(0x1561AFEF),
-    accentHigh = Color(0xFF61AFEF),    // Atom blue
-    textPrimary = Color(0xFFCDD3DE),
-    textSecondary = Color(0xFF7F8A99),
-    tileBackground = Color(0xFF2C313A),
-    mainBackground = Color(0xFF21252B),
-    errorAccent = Color(0xFFE06C75),
-    cardToday = Color(0xFF292E36),
-    cardFocus = Color(0xFF2F3440),
-    cardReading = Color(0xFF292E36),
-    cardWallet = Color(0xFF263040),
-    clusterIntelligence = Color(0xFF61AFEF),
-    clusterUtility = Color(0xFF98C379),
-    clusterAction = Color(0xFFE5C07B),
-    clusterCommunication = Color(0xFF56B6C2),
-    clusterAssistant = Color(0xFFC678DD),
-    clusterHealth = Color(0xFFE06C75)
+// ── LOWGLARE: Black background, low-brightness off-white (minimal eye strain, night reading) ──
+private val LowGlareColorScheme = darkColorScheme(
+    primary = Color(0xFF808080),      // Muted grey (de-saturated)
+    secondary = Color(0xFF696969),
+    tertiary = Color(0xFF606060),
+    background = Color(0xFF000000),   // Pure black
+    surface = Color(0xFF1A1A1A),       // Very dark grey
+    onBackground = Color(0xFFB0B0B0), // Dim off-white (reduced brightness)
+    onSurface = Color(0xFFA0A0A0)
 )
 
-// ── Atom One Dark Palette (17:30+, bright ambient): Deep navy, IDE-calm ──
-private val BlueHourPalette = AmbientPalette(
-    wallpaperScrimTop = Color(0x9921252B),
-    wallpaperScrimMid = Color(0xCC21252B),
-    wallpaperScrimBottom = Color(0xF221252B),
-    wallpaperGlow = Color(0x1261AFEF),
-    panel = Color(0xFF2C313A),
-    elevatedPanel = Color(0xFF333841),
-    searchPanel = Color(0xFF1C2026),
-    drawerBackground = Color(0xFF21252B),
-    chipBackground = Color(0xFF353B45),
-    closeButtonContainer = Color(0xFF2C313A),
-    accentHalo = Color(0x1561AFEF),
-    accentHigh = Color(0xFF61AFEF),    // Atom blue
-    textPrimary = Color(0xFFCDD3DE),   // Atom light text
-    textSecondary = Color(0xFF7F8A99), // Atom muted
-    tileBackground = Color(0xFF2C313A),
-    mainBackground = Color(0xFF21252B), // Atom One Dark base
-    errorAccent = Color(0xFFE06C75),   // Atom red
-    cardToday = Color(0xFF292E36),
-    cardFocus = Color(0xFF2F3440),
-    cardReading = Color(0xFF292E36),
-    cardWallet = Color(0xFF263040),
-    clusterIntelligence = Color(0xFF61AFEF),
-    clusterUtility = Color(0xFF98C379),
-    clusterAction = Color(0xFFE5C07B),
-    clusterCommunication = Color(0xFF56B6C2),
-    clusterAssistant = Color(0xFFC678DD),
-    clusterHealth = Color(0xFFE06C75)
+// ── DAYLIGHT_LIGHT Palette (200+ lux, Light mode): White bg, black text, high contrast ──
+private val DaylightLightPalette = AmbientPalette(
+    wallpaperScrimTop = Color(0x33FFFFFF),
+    wallpaperScrimMid = Color(0x66FFFFFF),
+    wallpaperScrimBottom = Color(0x99FFFFFF),
+    wallpaperGlow = Color(0x08000000),
+    panel = Color(0xFFF3F4F6),
+    elevatedPanel = Color(0xFFE5E7EB),
+    searchPanel = Color(0xFFFFFFFF),
+    drawerBackground = Color(0xFFFFFFFF),
+    chipBackground = Color(0xFFE5E7EB),
+    closeButtonContainer = Color(0xFFE5E7EB),
+    accentHalo = Color(0x19000000),
+    accentHigh = Color(0xFF065F73),    // Teal (high contrast on white)
+    textPrimary = Color(0xFF111827),   // Nearly black
+    textSecondary = Color(0xFF6B7280), // Dark grey
+    tileBackground = Color(0xFFF9FAFB),
+    mainBackground = Color(0xFFFFFFFF), // Pure white
+    errorAccent = Color(0xFFDC2626),
+    cardToday = Color(0xFFF3F4F6),
+    cardFocus = Color(0xFFE5E7EB),
+    cardReading = Color(0xFFF3F4F6),
+    cardWallet = Color(0xFFE0F2FE),
+    clusterIntelligence = Color(0xFF0EA5E9),
+    clusterUtility = Color(0xFF22C55E),
+    clusterAction = Color(0xFFEA580C),
+    clusterCommunication = Color(0xFF3B82F6),
+    clusterAssistant = Color(0xFF8B5CF6),
+    clusterHealth = Color(0xFFDC2626)
 )
 
-// ── Warm Paper Night Palette (dark ambient, any time): Deep warm paper, off-white ink ──
-private val ReadingPalette = AmbientPalette(
-    wallpaperScrimTop = Color(0x99141312),
-    wallpaperScrimMid = Color(0xCC141312),
-    wallpaperScrimBottom = Color(0xF2141312),
-    wallpaperGlow = Color(0x10D4A574),
-    panel = Color(0xFF2A2520),
-    elevatedPanel = Color(0xFF332E28),
-    searchPanel = Color(0xFF1E1A16),
-    drawerBackground = Color(0xFF1A1612),
-    chipBackground = Color(0xFF352F28),
-    closeButtonContainer = Color(0xFF2A2520),
-    accentHalo = Color(0x15D4A574),
-    accentHigh = Color(0xFFD4A574),    // Warm rose-gold
-    textPrimary = Color(0xFFEDE8DF),   // Off-white: warm parchment
-    textSecondary = Color(0xFFF5F2EC), // Slightly lighter off-white for content
-    tileBackground = Color(0xFF211D18),
-    mainBackground = Color(0xFF1A1612), // Warm paper dark — deep warm brown-black
-    errorAccent = Color(0xFFCF6679),
-    cardToday = Color(0xFF252017),
-    cardFocus = Color(0xFF2E2920),
-    cardReading = Color(0xFF252017),
-    cardWallet = Color(0xFF20251A),
-    clusterIntelligence = Color(0xFF4A5568),
-    clusterUtility = Color(0xFF48BB78),
-    clusterAction = Color(0xFFED8936),
-    clusterCommunication = Color(0xFFA0AEC0),
-    clusterAssistant = Color(0xFF9F7AEA),
-    clusterHealth = Color(0xFFF56565)
+// ── DAYLIGHT_READING Palette (200+ lux, Reading mode): Off-blue bg, slate-grey text, reduced contrast ──
+private val DaylightReadingPalette = AmbientPalette(
+    wallpaperScrimTop = Color(0x33EFF6FF),
+    wallpaperScrimMid = Color(0x66EFF6FF),
+    wallpaperScrimBottom = Color(0x99EFF6FF),
+    wallpaperGlow = Color(0x081E40AF),
+    panel = Color(0xFFEDE9FE),
+    elevatedPanel = Color(0xFFDDD6FE),
+    searchPanel = Color(0xFFF0F4F8),
+    drawerBackground = Color(0xFFF0F4F8),
+    chipBackground = Color(0xFFDDD6FE),
+    closeButtonContainer = Color(0xFFDDD6FE),
+    accentHalo = Color(0x151E40AF),
+    accentHigh = Color(0xFF1E40AF),    // Deep blue
+    textPrimary = Color(0xFF374151),   // Slate grey (reduced contrast on blue)
+    textSecondary = Color(0xFF64748B), // Lighter slate
+    tileBackground = Color(0xFFF3F4F8),
+    mainBackground = Color(0xFFF0F4F8), // Off-blue (Gemini-like)
+    errorAccent = Color(0xFF9333EA),   // Soft purple
+    cardToday = Color(0xFFEDE9FE),
+    cardFocus = Color(0xFFDDD6FE),
+    cardReading = Color(0xFFEDE9FE),
+    cardWallet = Color(0xFFE0E7FF),
+    clusterIntelligence = Color(0xFF1E40AF),
+    clusterUtility = Color(0xFF059669),
+    clusterAction = Color(0xFFA16207),
+    clusterCommunication = Color(0xFF0369A1),
+    clusterAssistant = Color(0xFF6D28D9),
+    clusterHealth = Color(0xFFA4161A)
 )
 
-// Legacy earthy palette (fallback)
-private val EarthyPalette = ReadingPalette
-
-// ── Quiet Light Palette (7:30–17:30, bright ambient): Warm cream, editorial calm ──
-private val DayPalette = AmbientPalette(
-    wallpaperScrimTop = Color(0x10EDE8DC),
-    wallpaperScrimMid = Color(0x35EDE8DC),
-    wallpaperScrimBottom = Color(0x70EDE8DC),
-    wallpaperGlow = Color(0x157A5C3E),
-    panel = Color(0xFFE5DFCF),
-    elevatedPanel = Color(0xFFD9D3C3),
-    searchPanel = Color(0xFFEDE8DC),
-    drawerBackground = Color(0xFFF5F0E8),
-    chipBackground = Color(0xFFD9D3C3),
-    closeButtonContainer = Color(0xFFD9D3C3),
-    accentHalo = Color(0x207A5C3E),
-    accentHigh = Color(0xFF7A5C3E),    // Warm brown
-    textPrimary = Color(0xFF3D3530),   // Warm dark brown
-    textSecondary = Color(0xFF6B6157), // Muted warm grey
-    tileBackground = Color(0xFFDDD8C8),
-    mainBackground = Color(0xFFF5F0E8), // Quiet Light cream
-    errorAccent = Color(0xFFA32929),
-    cardToday = Color(0xFFE8E2D2),
-    cardFocus = Color(0xFFE2DBCB),
-    cardReading = Color(0xFFE8E2D2),
-    cardWallet = Color(0xFFE0E5D0),
-    clusterIntelligence = Color(0xFF2B6CB0),
-    clusterUtility = Color(0xFF5C6E5B),
-    clusterAction = Color(0xFF7A5C3E),
-    clusterCommunication = Color(0xFF718096),
-    clusterAssistant = Color(0xFF7D5A7A),
-    clusterHealth = Color(0xFFA32929)
+// ── INDOOR_LIGHT Palette (10-100 lux, Light mode): Warm yellow bg, black text ──
+private val IndoorLightPalette = AmbientPalette(
+    wallpaperScrimTop = Color(0x33FFFAEB),
+    wallpaperScrimMid = Color(0x66FFFAEB),
+    wallpaperScrimBottom = Color(0x99FFFAEB),
+    wallpaperGlow = Color(0x1092400E),
+    panel = Color(0xFFFEF3C7),
+    elevatedPanel = Color(0xFFFCD34D),
+    searchPanel = Color(0xFFFFFBEB),
+    drawerBackground = Color(0xFFFFFBEB),
+    chipBackground = Color(0xFFFCD34D),
+    closeButtonContainer = Color(0xFFFCD34D),
+    accentHalo = Color(0x1992400E),
+    accentHigh = Color(0xFFA16207),    // Warm brown
+    textPrimary = Color(0xFF78350F),   // Dark brown
+    textSecondary = Color(0xFFB45309), // Medium brown
+    tileBackground = Color(0xFFFEF08A),
+    mainBackground = Color(0xFFFFFBEB), // Soft warm cream-yellow
+    errorAccent = Color(0xFFB91C1C),
+    cardToday = Color(0xFFFEF3C7),
+    cardFocus = Color(0xFFFCD34D),
+    cardReading = Color(0xFFFEF3C7),
+    cardWallet = Color(0xFFFFECB3),
+    clusterIntelligence = Color(0xFF92400E),
+    clusterUtility = Color(0xFF654321),
+    clusterAction = Color(0xFFA16207),
+    clusterCommunication = Color(0xFF8B4513),
+    clusterAssistant = Color(0xFF92400E),
+    clusterHealth = Color(0xFFB91C1C)
 )
 
-private val LocalAmbientPalette = staticCompositionLocalOf { EarthyPalette }
-private val LocalAmbientMode = staticCompositionLocalOf { AmbientMode.READING }
+// ── INDOOR_READING Palette (10-100 lux, Reading mode): Dark grey bg, off-white text ──
+private val IndoorReadingPalette = AmbientPalette(
+    wallpaperScrimTop = Color(0x331F2937),
+    wallpaperScrimMid = Color(0x661F2937),
+    wallpaperScrimBottom = Color(0x991F2937),
+    wallpaperGlow = Color(0x1093C5FD),
+    panel = Color(0xFF374151),
+    elevatedPanel = Color(0xFF4B5563),
+    searchPanel = Color(0xFF2D3748),
+    drawerBackground = Color(0xFF1F2937),
+    chipBackground = Color(0xFF4B5563),
+    closeButtonContainer = Color(0xFF374151),
+    accentHalo = Color(0x1593C5FD),
+    accentHigh = Color(0xFF93C5FD),    // Light blue
+    textPrimary = Color(0xFFF3F4F6),   // Off-white
+    textSecondary = Color(0xFFE5E7EB), // Light grey
+    tileBackground = Color(0xFF2D3748),
+    mainBackground = Color(0xFF1F2937), // Dark grey
+    errorAccent = Color(0xFFF87171),
+    cardToday = Color(0xFF2D3748),
+    cardFocus = Color(0xFF374151),
+    cardReading = Color(0xFF2D3748),
+    cardWallet = Color(0xFF1E3A5F),
+    clusterIntelligence = Color(0xFF93C5FD),
+    clusterUtility = Color(0xFF86EFAC),
+    clusterAction = Color(0xFFFCA5A5),
+    clusterCommunication = Color(0xFFA5B4FC),
+    clusterAssistant = Color(0xFFDDD6FE),
+    clusterHealth = Color(0xFFFCA5A5)
+)
+
+// ── LOWGLARE Palette (0-10 lux, forced): Black bg, low-brightness off-white (minimal eye strain) ──
+private val LowGlarePalette = AmbientPalette(
+    wallpaperScrimTop = Color(0x33000000),
+    wallpaperScrimMid = Color(0x66000000),
+    wallpaperScrimBottom = Color(0x99000000),
+    wallpaperGlow = Color(0x04808080),
+    panel = Color(0xFF262626),
+    elevatedPanel = Color(0xFF3A3A3A),
+    searchPanel = Color(0xFF1A1A1A),
+    drawerBackground = Color(0xFF000000),
+    chipBackground = Color(0xFF3A3A3A),
+    closeButtonContainer = Color(0xFF262626),
+    accentHalo = Color(0x08808080),
+    accentHigh = Color(0xFF808080),    // Muted grey (de-saturated)
+    textPrimary = Color(0xFFB0B0B0),   // Dim off-white (low eye strain)
+    textSecondary = Color(0xFF909090), // Even dimmer grey
+    tileBackground = Color(0xFF1A1A1A),
+    mainBackground = Color(0xFF000000), // Pure black
+    errorAccent = Color(0xFF909090),   // Very muted (no bright reds)
+    cardToday = Color(0xFF262626),
+    cardFocus = Color(0xFF3A3A3A),
+    cardReading = Color(0xFF262626),
+    cardWallet = Color(0xFF1A2A3A),
+    clusterIntelligence = Color(0xFF707070),
+    clusterUtility = Color(0xFF707070),
+    clusterAction = Color(0xFF707070),
+    clusterCommunication = Color(0xFF707070),
+    clusterAssistant = Color(0xFF707070),
+    clusterHealth = Color(0xFF707070)
+)
+
+private val LocalAmbientPalette = staticCompositionLocalOf { LowGlarePalette }
+private val LocalAmbientMode = staticCompositionLocalOf { AmbientMode.LOWGLARE }
 
 object AmbientTheme {
     val palette: AmbientPalette
@@ -342,7 +373,7 @@ fun AmbientLauncherTheme(
 @Composable
 private fun rememberAmbientMode(): AmbientMode {
     val context = LocalContext.current
-    return produceState(initialValue = resolveAmbientMode(LocalTime.now(), 100f, AmbientMode.READING)) {
+    return produceState(initialValue = resolveAmbientMode(LocalTime.now(), 100f, AmbientMode.LOWGLARE)) {
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         val lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
         var currentLux = 100f // Default to indoor brightness
@@ -383,31 +414,32 @@ private fun rememberAmbientMode(): AmbientMode {
 
 private fun ambientThemeTokensFor(mode: AmbientMode): AmbientThemeTokens {
     return when (mode) {
-        AmbientMode.EARLY_MORNING -> AmbientThemeTokens(mode, true, EarlyMorningColorScheme, EarlyMorningPalette)
-        AmbientMode.DAY -> AmbientThemeTokens(mode, false, DayColorScheme, DayPalette)
-        AmbientMode.BLUE_HOUR -> AmbientThemeTokens(mode, true, BlueHourColorScheme, BlueHourPalette)
-        AmbientMode.READING -> AmbientThemeTokens(mode, true, ReadingColorScheme, ReadingPalette)
+        AmbientMode.DAYLIGHT_LIGHT -> AmbientThemeTokens(mode, false, DaylightLightColorScheme, DaylightLightPalette)
+        AmbientMode.DAYLIGHT_READING -> AmbientThemeTokens(mode, false, DaylightReadingColorScheme, DaylightReadingPalette)
+        AmbientMode.INDOOR_LIGHT -> AmbientThemeTokens(mode, false, IndoorLightColorScheme, IndoorLightPalette)
+        AmbientMode.INDOOR_READING -> AmbientThemeTokens(mode, true, IndoorReadingColorScheme, IndoorReadingPalette)
+        AmbientMode.LOWGLARE -> AmbientThemeTokens(mode, true, LowGlareColorScheme, LowGlarePalette)
     }
 }
 
 private fun resolveAmbientMode(time: LocalTime, lux: Float, currentMode: AmbientMode): AmbientMode {
-    // 1. Ambient light takes priority — any dark environment → Reading mode
-    // Hysteresis: enter READING at lux < 8, exit at lux > 15
-    val isDark = if (currentMode == AmbientMode.READING) lux < 15f else lux < 8f
-    if (isDark) return AmbientMode.READING
-
-    // Dim indoor light → Early Morning feel
-    // Hysteresis: enter EARLY_MORNING at lux < 120, exit at lux > 180
-    val isDim = if (currentMode == AmbientMode.EARLY_MORNING) lux < 180f else lux < 120f
-    if (isDim) return AmbientMode.EARLY_MORNING
-
-    // 2. Bright ambient light → Time-of-Day determines mode
     val dayStart = LocalTime.of(7, 30)
-    val blueHourStart = LocalTime.of(17, 30)
+    val nightStart = LocalTime.of(17, 30)
+    val isDaytime = !time.isBefore(dayStart) && time.isBefore(nightStart)
 
-    return when {
-        !time.isBefore(dayStart) && time.isBefore(blueHourStart) -> AmbientMode.DAY
-        !time.isBefore(blueHourStart) -> AmbientMode.BLUE_HOUR
-        else -> AmbientMode.EARLY_MORNING
+    // 0–10 lux: Always low-glare (forced, no exceptions)
+    // Hysteresis: enter at < 10, exit at > 15
+    val isLowLight = if (currentMode == AmbientMode.LOWGLARE) lux < 15f else lux < 10f
+    if (isLowLight) return AmbientMode.LOWGLARE
+
+    // 10–100 lux: Indoor reading (reduced contrast)
+    // Hysteresis: enter at < 100, exit at > 150
+    val isMediumLight = if (currentMode in setOf(AmbientMode.DAYLIGHT_READING, AmbientMode.INDOOR_READING)) lux < 150f else lux < 100f
+    if (isMediumLight) {
+        return if (isDaytime) AmbientMode.DAYLIGHT_READING else AmbientMode.INDOOR_READING
     }
+
+    // 200+ lux: Bright light (high contrast)
+    // Hysteresis: enter at > 100, exit at < 50
+    return if (isDaytime) AmbientMode.DAYLIGHT_LIGHT else AmbientMode.INDOOR_LIGHT
 }

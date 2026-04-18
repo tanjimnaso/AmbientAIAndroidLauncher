@@ -23,7 +23,8 @@ import kotlinx.coroutines.Dispatchers
 internal data class AppInfo(
     val label: String,
     val packageName: String,
-    val bucket: LauncherBucket = LauncherBucket.MISC
+    val bucket: LauncherBucket = LauncherBucket.MISC,
+    val firstInstallTime: Long = 0L
 )
 
 private val iconCache = LruCache<String, ImageBitmap>(150)
@@ -48,13 +49,18 @@ fun rememberAppIcon(packageName: String): ImageBitmap? {
     }.value
 }
 
-/** Reusable icon filter that desaturates and tints for an ambient industrial look. */
+/** Icon filter: tint opacity varies by light mode for visibility. */
+@Composable
 internal fun getAmbientIconFilter(bucketColor: Color): ColorFilter {
-    // 1. Desaturate to 20% to remove noisy branding colors
-    // 2. Blend with bucket color at 55% opacity to unify the interface
-    // Note: Chaining ColorMatrix and Tint is complex in Compose, 
-    // but Tint + BlendMode.SrcAtop does most of the heavy lifting.
-    return ColorFilter.tint(bucketColor.copy(alpha = 0.55f), BlendMode.SrcAtop)
+    val mode = com.ambient.launcher.ui.theme.AmbientTheme.mode
+    val opacity = when (mode) {
+        com.ambient.launcher.ui.theme.AmbientMode.DAYLIGHT_LIGHT -> 0.20f  // Light mode: subtle tint
+        com.ambient.launcher.ui.theme.AmbientMode.INDOOR_LIGHT -> 0.20f
+        com.ambient.launcher.ui.theme.AmbientMode.DAYLIGHT_READING -> 0.40f // Reading: balanced
+        com.ambient.launcher.ui.theme.AmbientMode.INDOOR_READING -> 0.40f
+        com.ambient.launcher.ui.theme.AmbientMode.LOWGLARE -> 0.55f          // Dark: strong cohesion
+    }
+    return ColorFilter.tint(bucketColor.copy(alpha = opacity), BlendMode.SrcAtop)
 }
 
 /**

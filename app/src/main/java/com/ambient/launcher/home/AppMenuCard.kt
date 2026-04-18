@@ -4,13 +4,18 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
@@ -28,7 +33,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.foundation.Image
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -41,14 +45,96 @@ import com.ambient.launcher.ui.theme.AmbientTheme
 import com.ambient.launcher.ui.theme.InterFontFamily
 import com.ambient.launcher.ui.theme.SyneFontFamily
 
+// System apps that must never appear in New Apps or All Apps view.
+// Extend this list after testing.
+internal val NEVER_SHOW_PACKAGES = setOf(
+    // Android core & Google services
+    "com.google.android.gms",
+    "com.google.android.gsf",
+    "com.google.android.webview",
+    "com.android.htmlviewer",
+    "com.android.backupconfirm",
+    "com.android.providers.downloads",
+    "com.android.providers.media",
+    "com.android.providers.media.module",
+    "com.android.providers.contacts",
+    "com.android.providers.calendar",
+    "com.android.providers.telephony",
+    "com.android.settings",
+    "com.android.systemui",
+    "com.android.phone",
+    "com.android.server.telecom",
+    "com.android.inputmethod.latin",
+    "com.android.bluetooth",
+    "com.android.nfc",
+    "com.android.wallpaper",
+    "com.android.permissioncontroller",
+    "com.android.packageinstaller",
+    "com.google.android.inputmethod.latin",
+    "com.google.android.packageinstaller",
+    "com.google.android.configupdater",
+    "com.google.android.ext.services",
+    "com.google.android.ext.shared",
+    "com.google.android.permissioncontroller",
+    "com.google.android.adservices.api",
+    "com.google.android.federatedcompute",
+    "com.google.android.ondevicepersonalization.services",
+    // Samsung system
+    "com.samsung.android.incallui",
+    "com.samsung.android.app.telephonyui",
+    "com.samsung.android.sm.devicesecurity",
+    "com.samsung.android.sm",
+    "com.samsung.android.providers.media",
+    "com.samsung.android.providers.contacts",
+    "com.samsung.android.providers.calendar",
+    "com.samsung.android.knox.attestation",
+    "com.samsung.android.samsungpass",
+    "com.samsung.android.samsungpassautofill",
+    "com.samsung.android.secsettings",
+    "com.samsung.android.location",
+    "com.samsung.android.networkstack",
+    "com.samsung.android.networkstack.tethering",
+    "com.samsung.android.biometrics.app.setting",
+    "com.samsung.android.sdk.handwriting",
+    "com.samsung.android.kgclient",
+    "com.samsung.android.wifi.softap.resources",
+    "com.sec.android.app.launcher",
+    "com.sec.android.inputmethod",
+    "com.samsung.android.honeyboard",
+    "com.samsung.android.app.settings.bixby",
+    "com.samsung.android.bixby.wakeup",
+    "com.samsung.android.bixby.service",
+    "com.samsung.android.bixby.agent",
+    "com.samsung.android.bixby.voiceinput",
+    "com.samsung.android.game.gamehome",
+    "com.samsung.android.app.smartcapture",
+    "com.samsung.android.kids",
+    "com.samsung.android.app.spage",
+    "com.samsung.android.themestore",
+    "com.samsung.android.themecenter",
+    "com.samsung.android.mobileservice",
+    "com.samsung.android.app.updatecenter",
+    "com.samsung.android.app.tips",
+    "com.samsung.android.soundassistant",
+    "com.sec.android.diagmonagent",
+    "com.samsung.android.app.dressroom",
+    "com.samsung.android.service.aircommand",
+    "com.samsung.android.app.homestar",
+    "com.samsung.android.app.goodcatch",
+    "com.sec.android.easyMover",
+    "com.samsung.android.smartswitch",
+)
+
 /**
  * AppMenuCard
  *
  * Slides up from the bottom. Contains:
- *   • Search bar at the top (filters bucket rows and app chips in real time)
- *   • Scrollable bucket list (no pinned app tiles — managed on the home screen instead)
+ *   • Search bar at the top
+ *   • "New Apps" special group (installed last 7 days) with an "all apps" button
+ *   • Scrollable bucket list with tap-to-collapse titles and long-press to reassign
  *
- * Signature change from previous version: [topApps] and [tileSizes] parameters removed.
+ * Scroll-dismiss is two-gesture: the first gesture scrolls the list to the top;
+ * only a second, separate gesture (swipe-down from top) dismisses the card.
  */
 @Composable
 internal fun AppMenuCard(
@@ -56,13 +142,25 @@ internal fun AppMenuCard(
     visibleBuckets: List<LauncherBucket>,
     bucketApps: Map<LauncherBucket, List<AppInfo>>,
     configuration: LauncherConfiguration,
+    newApps: List<AppInfo>,
+    allApps: List<AppInfo>,
     onDismiss: () -> Unit,
+    onToggleCollapse: (LauncherBucket) -> Unit,
     onAppClick: (AppInfo) -> Unit,
     onAppLongClick: (AppInfo) -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
+    var showAllApps by remember { mutableStateOf(false) }
 
-    // Filter buckets and apps by search query
+    // Reset state when card closes
+    LaunchedEffect(isOpen) {
+        if (!isOpen) {
+            searchQuery = ""
+            showAllApps = false
+        }
+    }
+
+    // Filter regular buckets and their apps
     val filteredBuckets = remember(searchQuery, visibleBuckets, bucketApps) {
         if (searchQuery.isBlank()) visibleBuckets
         else LauncherBucket.entries.filter { bucket ->
@@ -78,8 +176,15 @@ internal fun AppMenuCard(
         }
     }
 
-    // Clear search when closed
-    LaunchedEffect(isOpen) { if (!isOpen) searchQuery = "" }
+    // Filter special groups by search
+    val filteredNewApps = remember(searchQuery, newApps) {
+        if (searchQuery.isBlank()) newApps
+        else newApps.filter { it.label.contains(searchQuery, ignoreCase = true) }
+    }
+    val filteredAllApps = remember(searchQuery, allApps) {
+        if (searchQuery.isBlank()) allApps
+        else allApps.filter { it.label.contains(searchQuery, ignoreCase = true) }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
 
@@ -184,24 +289,39 @@ internal fun AppMenuCard(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 // ── App list ──────────────────────────────────────────────────
-                // nestedScrollConnection: when list is at top and user swipes down,
-                // the unconsumed downward scroll (available.y > 0 in onPostScroll)
-                // accumulates. Once past 120px or a fast fling, the sheet dismisses.
+                // Two-gesture dismiss: a gesture that scrolled the list resets the dismiss
+                // accumulator. Only a fresh gesture starting from the top can dismiss.
                 val listState = rememberLazyListState()
                 val dismissOnSwipeDown = remember(onDismiss) {
                     object : NestedScrollConnection {
                         private var accumulated = 0f
+                        // True if the current touch gesture moved the list content at all.
+                        // Resets in onPostFling (fires even after slow drags).
+                        private var gestureScrolledList = false
+
                         override fun onPostScroll(
                             consumed: Offset, available: Offset, source: NestedScrollSource
                         ): Offset {
-                            if (available.y > 0f) {
-                                accumulated += available.y
-                                if (accumulated > 120f) { onDismiss(); accumulated = 0f }
-                            } else { accumulated = 0f }
+                            when {
+                                consumed.y != 0f -> {
+                                    // List scrolled this frame — block dismiss for this gesture
+                                    gestureScrolledList = true
+                                    accumulated = 0f
+                                }
+                                available.y > 0f && !gestureScrolledList -> {
+                                    // List is at top, finger moving down — accumulate for dismiss
+                                    accumulated += available.y
+                                    if (accumulated > 120f) { onDismiss(); accumulated = 0f }
+                                }
+                                else -> accumulated = 0f
+                            }
                             return Offset.Zero
                         }
+
                         override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
-                            if (available.y > 600f) onDismiss()
+                            // Only fling-dismiss if the fling started from the top (list not scrolled this gesture)
+                            if (!gestureScrolledList && available.y > 600f) onDismiss()
+                            gestureScrolledList = false
                             accumulated = 0f
                             return Velocity.Zero
                         }
@@ -209,12 +329,12 @@ internal fun AppMenuCard(
                 }
 
                 LazyColumn(
-                    state                 = listState,
-                    modifier              = Modifier.fillMaxWidth().nestedScroll(dismissOnSwipeDown),
-                    verticalArrangement   = Arrangement.spacedBy(24.dp),
-                    contentPadding        = PaddingValues(bottom = 80.dp)
+                    state               = listState,
+                    modifier            = Modifier.fillMaxWidth().nestedScroll(dismissOnSwipeDown),
+                    verticalArrangement = Arrangement.spacedBy(24.dp),
+                    contentPadding      = PaddingValues(bottom = 80.dp)
                 ) {
-                    if (filteredBuckets.isEmpty() && searchQuery.isNotBlank()) {
+                    if (filteredBuckets.isEmpty() && filteredNewApps.isEmpty() && filteredAllApps.isEmpty() && searchQuery.isNotBlank()) {
                         item {
                             Text(
                                 text     = "No apps matching \"$searchQuery\"",
@@ -225,19 +345,34 @@ internal fun AppMenuCard(
                         }
                     }
 
+                    // ── Special group: New Apps / All ─────────────────────────
+                    item(key = "new_apps_special") {
+                        NewAppsRow(
+                            newApps        = filteredNewApps,
+                            allApps        = filteredAllApps,
+                            showAll        = showAllApps,
+                            onShowAllToggle = { showAllApps = !showAllApps },
+                            onAppClick     = { app -> onAppClick(app); onDismiss() },
+                            onAppLongClick = onAppLongClick
+                        )
+                    }
+
+                    // ── Regular bucket groups ─────────────────────────────────
                     itemsIndexed(filteredBuckets, key = { _, b -> b.name }) { index, bucket ->
                         if (bucket == LauncherBucket.SMART_HOME) {
                             AppMenuSmartHomeRow(
-                                apps         = filteredApps[bucket].orEmpty(),
-                                onAppClick   = { app -> onAppClick(app); onDismiss() }
+                                apps       = filteredApps[bucket].orEmpty(),
+                                onAppClick = { app -> onAppClick(app); onDismiss() }
                             )
                         } else {
                             AppMenuBucketRow(
-                                indexLabel   = (index + 1).toString().padStart(2, '0'),
-                                title        = configuration.displayTitle(bucket),
-                                apps         = filteredApps[bucket].orEmpty(),
-                                onAppClick   = { app -> onAppClick(app); onDismiss() },
-                                onAppLongClick = onAppLongClick
+                                indexLabel      = (index + 1).toString().padStart(2, '0'),
+                                title           = configuration.displayTitle(bucket),
+                                apps            = filteredApps[bucket].orEmpty(),
+                                isCollapsed     = searchQuery.isBlank() && configuration.isCollapsed(bucket),
+                                onToggleCollapse = { onToggleCollapse(bucket) },
+                                onAppClick      = { app -> onAppClick(app); onDismiss() },
+                                onAppLongClick  = onAppLongClick
                             )
                         }
                     }
@@ -247,19 +382,108 @@ internal fun AppMenuCard(
     }
 }
 
+// ── New Apps / All Apps special group ─────────────────────────────────────────
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun NewAppsRow(
+    newApps: List<AppInfo>,
+    allApps: List<AppInfo>,
+    showAll: Boolean,
+    onShowAllToggle: () -> Unit,
+    onAppClick: (AppInfo) -> Unit,
+    onAppLongClick: (AppInfo) -> Unit
+) {
+    val displayApps = if (showAll) allApps else newApps
+    val title       = if (showAll) "All" else "New Apps"
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier          = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text     = "00",
+                style    = ResponsiveTypography.t3,
+                color    = AmbientTheme.palette.textPrimary.copy(alpha = 0.5f),
+                modifier = Modifier.width(32.dp)
+            )
+            Text(
+                text     = title,
+                style    = ResponsiveTypography.t1,
+                color    = AmbientTheme.palette.textPrimary,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text     = if (showAll) "↑ new apps" else "all apps →",
+                style    = ResponsiveTypography.t3.copy(fontFamily = InterFontFamily),
+                color    = AmbientTheme.palette.accentHigh,
+                modifier = Modifier
+                    .clickable { onShowAllToggle() }
+                    .padding(start = 8.dp)
+            )
+        }
+
+        AnimatedVisibility(visible = displayApps.isNotEmpty()) {
+            @OptIn(ExperimentalLayoutApi::class)
+            FlowRow(
+                modifier              = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 32.dp, top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement   = Arrangement.spacedBy(8.dp)
+            ) {
+                displayApps.forEach { app ->
+                    androidx.compose.material3.Surface(
+                        shape    = RoundedCornerShape(50),
+                        color    = AmbientTheme.palette.tileBackground,
+                        border   = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
+                        modifier = Modifier.combinedClickable(
+                            onClick     = { onAppClick(app) },
+                            onLongClick = { onAppLongClick(app) }
+                        )
+                    ) {
+                        Text(
+                            text     = app.label,
+                            style    = MaterialTheme.typography.bodySmall,
+                            color    = AmbientTheme.palette.textPrimary,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        if (displayApps.isEmpty()) {
+            Text(
+                text     = if (showAll) "No apps" else "No new apps this week",
+                style    = ResponsiveTypography.t3,
+                color    = AmbientTheme.palette.textSecondary.copy(alpha = 0.4f),
+                modifier = Modifier.padding(start = 32.dp, top = 6.dp)
+            )
+        }
+    }
+}
+
 // ── Bucket row ────────────────────────────────────────────────────────────────
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun AppMenuBucketRow(
     indexLabel: String,
     title: String,
     apps: List<AppInfo>,
+    isCollapsed: Boolean,
+    onToggleCollapse: () -> Unit,
     onAppClick: (AppInfo) -> Unit,
     onAppLongClick: (AppInfo) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier          = Modifier.fillMaxWidth(),
+            modifier          = Modifier
+                .fillMaxWidth()
+                .clickable { onToggleCollapse() }
+                .padding(vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -269,33 +493,48 @@ private fun AppMenuBucketRow(
                 modifier = Modifier.width(32.dp)
             )
             Text(
-                text  = title,
-                style = ResponsiveTypography.t1,
-                color = AmbientTheme.palette.textPrimary
+                text     = title,
+                style    = ResponsiveTypography.t1,
+                color    = AmbientTheme.palette.textPrimary,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text  = if (isCollapsed) "▸" else "▾",
+                style = ResponsiveTypography.t3,
+                color = AmbientTheme.palette.textSecondary.copy(alpha = 0.5f)
             )
         }
 
-        @OptIn(ExperimentalLayoutApi::class)
-        FlowRow(
-            modifier                = Modifier
-                .fillMaxWidth()
-                .padding(start = 32.dp, top = 8.dp),
-            horizontalArrangement   = Arrangement.spacedBy(8.dp),
-            verticalArrangement     = Arrangement.spacedBy(8.dp)
+        AnimatedVisibility(
+            visible = !isCollapsed,
+            enter   = expandVertically(animationSpec = tween(200)),
+            exit    = shrinkVertically(animationSpec = tween(180))
         ) {
-            apps.forEach { app ->
-                androidx.compose.material3.Surface(
-                    shape    = RoundedCornerShape(50),
-                    color    = AmbientTheme.palette.tileBackground,
-                    border   = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
-                    modifier = Modifier.clickable { onAppClick(app) }
-                ) {
-                    Text(
-                        text     = app.label,
-                        style    = MaterialTheme.typography.bodySmall,
-                        color    = AmbientTheme.palette.textPrimary,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                    )
+            @OptIn(ExperimentalLayoutApi::class)
+            FlowRow(
+                modifier              = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 32.dp, top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement   = Arrangement.spacedBy(8.dp)
+            ) {
+                apps.forEach { app ->
+                    androidx.compose.material3.Surface(
+                        shape    = RoundedCornerShape(50),
+                        color    = AmbientTheme.palette.tileBackground,
+                        border   = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
+                        modifier = Modifier.combinedClickable(
+                            onClick     = { onAppClick(app) },
+                            onLongClick = { onAppLongClick(app) }
+                        )
+                    ) {
+                        Text(
+                            text     = app.label,
+                            style    = MaterialTheme.typography.bodySmall,
+                            color    = AmbientTheme.palette.textPrimary,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
                 }
             }
         }
@@ -307,15 +546,19 @@ private fun AppMenuSmartHomeRow(
     apps: List<AppInfo>,
     onAppClick: (AppInfo) -> Unit
 ) {
-    @OptIn(ExperimentalLayoutApi::class)
-    FlowRow(
-        modifier                = Modifier
+    Row(
+        modifier              = Modifier
             .fillMaxWidth()
-            .padding(start = 32.dp, top = 8.dp),
-        horizontalArrangement   = Arrangement.SpaceBetween,
-        verticalArrangement     = Arrangement.spacedBy(16.dp)
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(0.dp),
+        verticalAlignment     = Alignment.CenterVertically
     ) {
-        apps.forEach { app ->
+        // Left margin: 30% from left edge
+        Spacer(modifier = Modifier.weight(0.30f))
+
+        // First app
+        if (apps.isNotEmpty()) {
+            val app = apps[0]
             val iconBitmap  = rememberAppIcon(packageName = app.packageName)
             val bucketColor = app.bucket.themeColor(AmbientTheme.palette)
             if (iconBitmap != null) {
@@ -345,5 +588,44 @@ private fun AppMenuSmartHomeRow(
                 }
             }
         }
+
+        // Center spacing (40% of width)
+        Spacer(modifier = Modifier.weight(0.40f))
+
+        // Second app
+        if (apps.size > 1) {
+            val app = apps[1]
+            val iconBitmap  = rememberAppIcon(packageName = app.packageName)
+            val bucketColor = app.bucket.themeColor(AmbientTheme.palette)
+            if (iconBitmap != null) {
+                Image(
+                    bitmap             = iconBitmap,
+                    contentDescription = app.label,
+                    colorFilter        = getAmbientIconFilter(bucketColor),
+                    modifier           = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { onAppClick(app) }
+                )
+            } else {
+                androidx.compose.material3.Surface(
+                    shape    = RoundedCornerShape(12.dp),
+                    color    = AmbientTheme.palette.tileBackground,
+                    border   = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
+                    modifier = Modifier.size(48.dp).clickable { onAppClick(app) }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text     = app.label.take(1),
+                            style    = MaterialTheme.typography.bodyLarge,
+                            color    = AmbientTheme.palette.textPrimary
+                        )
+                    }
+                }
+            }
+        }
+
+        // Right margin: 30% from right edge
+        Spacer(modifier = Modifier.weight(0.30f))
     }
 }

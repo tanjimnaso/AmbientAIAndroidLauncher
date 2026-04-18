@@ -104,7 +104,8 @@ internal fun LauncherScreen(
     }
     LaunchedEffect(feedItems) {
         if (feedItems.isNotEmpty()) {
-            briefingViewModel.generateBriefing(feedItems.map { "${it.source}: ${it.title}" })
+            // 30 headlines is sufficient signal for a one-liner briefing — no need to send all 66+
+            briefingViewModel.generateBriefing(feedItems.take(30).map { "${it.source}: ${it.title}" })
         }
     }
     LaunchedEffect(Unit) {
@@ -141,6 +142,18 @@ internal fun LauncherScreen(
         configuration.bucketOrder.filter { bucket ->
             bucket !in configuration.hiddenBuckets && bucketApps[bucket].orEmpty().isNotEmpty()
         }
+    }
+
+    val sevenDaysAgo = remember { System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000 }
+    val newApps = remember(installedApps) {
+        installedApps
+            .filter { it.firstInstallTime > sevenDaysAgo && it.packageName !in NEVER_SHOW_PACKAGES }
+            .sortedBy { it.label.lowercase() }
+    }
+    val allApps = remember(installedApps) {
+        installedApps
+            .filter { it.packageName !in NEVER_SHOW_PACKAGES }
+            .sortedBy { it.label.lowercase() }
     }
 
     val topApps = remember(installedApps, configuration) {
@@ -295,19 +308,22 @@ internal fun LauncherScreen(
         }
 
         AppMenuCard(
-            isOpen         = showAppMenu,
-            visibleBuckets = visibleBuckets,
-            bucketApps     = bucketApps,
-            configuration  = configuration,
-            onDismiss      = { showAppMenu = false },
-            onAppClick     = { app ->
+            isOpen          = showAppMenu,
+            visibleBuckets  = visibleBuckets,
+            bucketApps      = bucketApps,
+            configuration   = configuration,
+            newApps         = newApps,
+            allApps         = allApps,
+            onDismiss       = { showAppMenu = false },
+            onToggleCollapse = { bucket -> updateConfiguration(configuration.toggleCollapse(bucket)) },
+            onAppClick      = { app ->
                 context.packageManager.getLaunchIntentForPackage(app.packageName)?.let {
                     it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     context.startActivity(it)
                 }
                 showAppMenu = false
             },
-            onAppLongClick = { editingApp = it }
+            onAppLongClick  = { editingApp = it }
         )
 
         if (editingApp != null) {
@@ -350,7 +366,7 @@ private fun LeftNewsPage(
 
         TodaysSignal(
             lastRefreshTime = lastFeedRefreshTime,
-            modifier        = Modifier.padding(horizontal = 28.dp, vertical = 16.dp)
+            modifier        = Modifier.padding(horizontal = 28.dp, vertical = 8.dp)
         )
 
         Text(
@@ -361,7 +377,7 @@ private fun LeftNewsPage(
                 letterSpacing = 1.5.sp
             ),
             color    = AmbientTheme.palette.textSecondary.copy(alpha = 0.55f),
-            modifier = Modifier.padding(start = 28.dp, end = 28.dp, bottom = 6.dp)
+            modifier = Modifier.padding(start = 28.dp, end = 28.dp, bottom = 4.dp)
         )
 
         AiBriefingSection(
@@ -379,8 +395,6 @@ private fun LeftNewsPage(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .padding(horizontal = 42.dp)
-                .padding(top = 16.dp)
         ) {
             HeadlinesSection(
                 feedItems       = feedItems,

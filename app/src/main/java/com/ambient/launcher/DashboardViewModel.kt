@@ -83,7 +83,7 @@ internal data class FeedSource(
 
 private fun getFeedSources(context: Context): List<FeedSource> {
     val prefs = context.getSharedPreferences("ambient_launcher_sections", Context.MODE_PRIVATE)
-    val json = prefs.getString("rss_sources_v2", null)
+    val json = prefs.getString("rss_sources_v3", null)
     return if (json != null) {
         runCatching {
             val array = JSONArray(json)
@@ -100,73 +100,46 @@ private fun getFeedSources(context: Context): List<FeedSource> {
 }
 
 internal val defaultFeedSources = listOf(
-    // Wire services — authoritative, global, event-driven
-    FeedSource("NYT World", "https://rss.nytimes.com/services/xml/rss/nyt/World.xml"),
+    // ── Global wire services ──────────────────────────────────────────────────
+    FeedSource("BBC World", "http://feeds.bbci.co.uk/news/world/rss.xml"),
     FeedSource("Al Jazeera", "https://www.aljazeera.com/xml/rss/all.xml"),
-    FeedSource("AP Top News", "http://associated-press.s3-website-us-east-1.amazonaws.com/topnews.xml"), //
-    FeedSource("Reuters World", "https://fivefilters.org/reuters-world.xml"), //
-    // Global Sources
-    FeedSource("Global Voices", "https://globalvoices.org/feed/" ),
-    FeedSource("The Straits Times", "https://www.straitstimes.com/RSS-Feeds" ),
-    FeedSource("The Times of India", "https://timesofindia.indiatimes.com/rss.cms" ),
-    FeedSource("Daily Maverick", "https://www.dailymaverick.co.za/dmrss/" ),
-    FeedSource("El Pais English", "https://english.elpais.com/rss/" ),
-    FeedSource("The Age Australia", "https://www.theage.com.au/rssheadlines" ),
-    FeedSource("Nikkei Asia Business", "https://asia.nikkei.com/rss/Business"), // [15]
-    FeedSource("South China Morning Post", "https://www.scmp.com/rss/4/feed"), //
-    FeedSource("AllAfrica English", "https://allafrica.com/tools/headlines/rdf/latest/headlines.rdf"), //
-    FeedSource("MercoPress LatAm", "https://en.mercopress.com/rss/latin-america"), //
     FeedSource("NYT World", "https://rss.nytimes.com/services/xml/rss/nyt/World.xml"),
-    FeedSource("France 24", "https://www.france24.com/en/rss"),
-    FeedSource("Deutsche Welle", "https://rss.dw.com/rdf/rss-en-all"),
-    FeedSource("NHK World", "https://www3.nhk.or.jp/nhkworld/en/news/"),
+    FeedSource("The Guardian", "https://www.theguardian.com/world/rss"),
+    FeedSource("NPR World", "https://feeds.npr.org/1004/rss.xml"),
     FeedSource("CBC World", "https://www.cbc.ca/cmlink/rss-world"),
-    // Politics
-    FeedSource("NPR News", "https://feeds.npr.org/1001/rss.xml"),
-    FeedSource("Politico", "https://rss.politico.com/politics-news.xml"),
+    FeedSource("Deutsche Welle", "https://rss.dw.com/rdf/rss-en-all"),
+    FeedSource("France 24", "https://www.france24.com/en/rss"),
+    FeedSource("ABC Australia", "https://www.abc.net.au/news/feed/51120/rss.xml"),
+    // ── Asia-Pacific ─────────────────────────────────────────────────────────
+    FeedSource("Nikkei Asia", "https://asia.nikkei.com/rss/feed/nar"),
+    FeedSource("South China Morning Post", "https://www.scmp.com/rss/91/feed"),
+    FeedSource("Global Voices", "https://globalvoices.org/feed/"),
+    FeedSource("NHK World", "https://www3.nhk.or.jp/nhkworld/en/news/rss.xml"),
+    // ── Latin America & Africa ────────────────────────────────────────────────
+    FeedSource("MercoPress", "https://en.mercopress.com/rss/latin-america"),
+    FeedSource("Daily Maverick", "https://www.dailymaverick.co.za/dmrss/"),
+    FeedSource("AllAfrica", "https://allafrica.com/tools/headlines/rdf/latest/headlines.rdf"),
+    // ── Politics & analysis ───────────────────────────────────────────────────
     FeedSource("The Economist", "https://www.economist.com/latest/rss.xml"),
     FeedSource("Foreign Policy", "https://foreignpolicy.com/feed/"),
-    FeedSource("CSIS Analysis", "https://www.csis.org/analysis/rss.xml"),
-    // === BUSINESS & ECONOMICS ===
-    FeedSource("Bloomberg", "https://www.bloomberg.com/feeds/markets"),
     FeedSource("Project Syndicate", "https://www.project-syndicate.org/rss"),
-    // Tech & science
+    FeedSource("El Pais English", "https://feeds.elpais.com/mrss-s/pages/ep/site/english.elpais.com/portada"),
+    // ── Tech & science ────────────────────────────────────────────────────────
     FeedSource("Ars Technica", "https://feeds.arstechnica.com/arstechnica/index"),
     FeedSource("Hacker News", "https://hnrss.org/frontpage"),
-    FeedSource("MIT Technology Review", "https://www.technologyreview.com/feed/"), //
-    FeedSource("IEEE Spectrum Top", "https://spectrum.ieee.org/feeds/feed.rss"), //
-    FeedSource("Science Magazine", "https://www.science.org/rss/news_current.xml"), //
     FeedSource("Quanta Magazine", "https://www.quantamagazine.org/feed/"),
     FeedSource("The Conversation", "https://theconversation.com/articles.atom"),
     FeedSource("Rest of World", "https://restofworld.org/feed/"),
-    // === ENVIRONMENT & CLIMATE ===
+    FeedSource("STAT News", "https://www.statnews.com/feed/"),
+    // ── Environment & climate ─────────────────────────────────────────────────
     FeedSource("Carbon Brief", "https://www.carbonbrief.org/feed/"),
     FeedSource("Mongabay", "https://news.mongabay.com/feed/"),
-    FeedSource("Yale Environment 360", "https://e360.yale.edu/feed.xml"),
-    // === CULTURE, IDEAS & LONGFORM ===
+    FeedSource("Yale E360", "https://e360.yale.edu/feed.xml"),
+    // ── Ideas & culture ───────────────────────────────────────────────────────
     FeedSource("Aeon", "https://aeon.co/feed.rss"),
-    FeedSource("Psyche", "https://psyche.co/feed"),
     FeedSource("Longreads", "https://longreads.com/feed/"),
     FeedSource("Smithsonian", "https://www.smithsonianmag.com/rss/articles/"),
-    FeedSource("Open Culture", "https://www.openculture.com/feed"),
-    // === HUMANITIES & SOCIAL SCIENCE ===
-    FeedSource("Lapham's Quarterly", "https://www.laphamsquarterly.org/rss.xml"),
     FeedSource("Public Domain Review", "https://publicdomainreview.org/feed/"),
-    // Health, & Wellness (Evidence-Based)
-    FeedSource("Mayo Clinic Research", "https://newsnetwork.mayoclinic.org/rss/research.xml"), // [36]
-    FeedSource("Harvard Health Blog", "https://www.health.harvard.edu/blog/feed"), // [53]
-    FeedSource("Stronger by Science", "https://sbspod.com/feed/"), // [41]
-    FeedSource("Science of Running", "http://feeds.feedburner.com/stevemagness"), //
-    FeedSource("iRunFar Trail", "https://www.irunfar.com/feed"), //
-    FeedSource("STAT News", "https://www.statnews.com/feed/"),
-    FeedSource("BMJ News", "https://www.bmj.com/rss.xml"),
-    FeedSource("Runner's World", "https://www.runnersworld.com/rss/all.xml"),
-    FeedSource("Greatist", "https://greatist.com/feed"),
-    FeedSource("Outside Magazine", "https://www.outsideonline.com/feed/"),
-    // Culinary Science & Precision Cooking
-    FeedSource("Serious Eats Latest", "https://www.seriouseats.com/atom.xml"), // [52]
-    FeedSource("ATK In the Test Kitchen", "https://megaphone.fm/feeds/americas-test-kitchen"), // [51]
-    FeedSource("Anova Culinary Blog", "https://anovaculinary.com/blogs/blog.atom") //
 )
 
 // ---------------------------------------------------------------------------
@@ -278,7 +251,7 @@ internal class DashboardViewModel(
     // Seed from SharedPreferences so the first refreshFeeds() on init uses real sources.
     private var currentSources: List<Pair<String, String>> = run {
         val prefs = appContext.getSharedPreferences("ambient_launcher_sections", Context.MODE_PRIVATE)
-        val json = prefs.getString("rss_sources_v2", null)
+        val json = prefs.getString("rss_sources_v3", null)
         if (json != null) {
             val parsed = runCatching {
                 val array = JSONArray(json)
@@ -300,7 +273,7 @@ internal class DashboardViewModel(
                     // Persist the migration
                     val array = JSONArray()
                     migrated.forEach { (n, u) -> array.put(JSONObject().put("name", n).put("url", u)) }
-                    prefs.edit().putString("rss_sources_v2", array.toString()).apply()
+                    prefs.edit().putString("rss_sources_v3", array.toString()).apply()
                 }
                 migrated
             } else null
@@ -413,12 +386,11 @@ internal class DashboardViewModel(
             for (profile in profiles) {
                 launcherApps.getActivityList(null, profile).forEach { info ->
                     if (info.componentName.packageName != appContext.packageName) {
-                        apps.add(
-                            AppInfo(
-                                label = info.label.toString(),
-                                packageName = info.componentName.packageName
-                            )
-                        )
+                        val pkg = info.componentName.packageName
+                        val installTime = try {
+                            appContext.packageManager.getPackageInfo(pkg, 0).firstInstallTime
+                        } catch (_: Exception) { 0L }
+                        apps.add(AppInfo(label = info.label.toString(), packageName = pkg, firstInstallTime = installTime))
                     }
                 }
             }
@@ -535,27 +507,36 @@ internal class DashboardViewModel(
         val finalSelection = mutableListOf<RssFeedItem>()
         var depth = 0
 
+        // Source publication frequency: sources that post fewer articles total
+        // are considered "infrequent" and get a boost so they surface before
+        // high-frequency publishers like wire services.
+        val sourceFrequency = bySource.mapValues { (_, items) -> items.size }
+        val maxFrequency = sourceFrequency.values.maxOrNull()?.toFloat() ?: 1f
+
+        // Cap scales with sources: 2 items per active source, capped at 80 to keep the list readable.
+        val feedCap = (bySource.size * 2).coerceIn(30, 80)
+
         // 3. Round-robin allocation
         // Pick the 1st story from every source, then the 2nd, up to MAX_PER_SOURCE
-        while (finalSelection.size < 30 && depth < MAX_PER_SOURCE && bySource.values.any { it.size > depth }) {
+        while (finalSelection.size < feedCap && depth < MAX_PER_SOURCE && bySource.values.any { it.size > depth }) {
             val candidates = bySource.values
                 .mapNotNull { itemsForSource ->
                     val item = itemsForSource.getOrNull(depth) ?: return@mapNotNull null
-                    
-                    // The #1 newest story (depth 0) uses the relaxed 14-day cutoff.
-                    // The #2 and #3 stories must pass the strict 48-hour cutoff.
+
                     if (depth == 0 || item.publishedAtEpochMillis >= strictCutoff) {
                         item
                     } else {
                         null
                     }
                 }
-                // Sort candidates at this depth chronologically (freshest first)
-                // This ensures if we hit the 30-item limit mid-cycle, we drop the oldest sources
-                .sortedByDescending { it.publishedAtEpochMillis }
+                // Infrequent sources rank first; within same frequency, sort by freshness.
+                .sortedWith(compareBy(
+                    { sourceFrequency[it.source] ?: 0 },
+                    { -it.publishedAtEpochMillis }
+                ))
 
             for (item in candidates) {
-                if (finalSelection.size >= 30) break
+                if (finalSelection.size >= feedCap) break
                 finalSelection.add(item)
             }
             depth++
@@ -574,7 +555,7 @@ internal class DashboardViewModel(
         sources.forEach { 
             array.put(JSONObject().put("name", it.name).put("url", it.url))
         }
-        prefs.edit().putString("rss_sources_v2", array.toString()).apply()
+        prefs.edit().putString("rss_sources_v3", array.toString()).apply()
         refreshFeeds()
     }
 
