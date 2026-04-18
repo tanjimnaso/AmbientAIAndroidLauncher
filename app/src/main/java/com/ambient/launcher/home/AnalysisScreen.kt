@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ambient.launcher.BriefingViewModel
+import com.ambient.launcher.tts.TtsIconButton
 import com.ambient.launcher.ui.theme.AmbientTheme
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -112,7 +113,7 @@ internal fun AnalysisScreen(
                 verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
                 Text(
-                    text = "INTELLIGENCE ANALYSIS",
+                    text = "NEWS ANALYSIS",
                     style = ResponsiveTypography.t3.copy(
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Normal,
@@ -150,9 +151,9 @@ internal fun AnalysisScreen(
                 Spacer(Modifier.height(12.dp))
                 Text(
                     text = if (isLoading)
-                        "Gemini Pro is generating the analysis.\nThis may take up to 2 minutes."
+                        "Gemini is generating the summary.\nThis may take up to 2 minutes."
                     else
-                        "No analysis has been generated for this signal.\nTap ANALYSE on the home screen to begin.",
+                        "No summary has been generated for this signal.\nTap ANALYSE on the home screen to begin.",
                     style = ResponsiveTypography.t3,
                     color = AmbientTheme.palette.textSecondary.copy(alpha = 0.4f),
                     lineHeight = 18.sp
@@ -175,6 +176,20 @@ internal fun AnalysisScreen(
                 Spacer(Modifier.height(40.dp))
             }
         }
+
+        // ── Top-right TTS button (drawn last so it stacks above content) ───
+        val analysisText = analysisState
+        if (!analysisText.isNullOrBlank() && !showArchives) {
+            TtsIconButton(
+                sessionId = "analysis:${briefingText.hashCode()}",
+                title = "News Analysis",
+                textProvider = { "$briefingText. $analysisText" },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(top = 16.dp, end = 20.dp)
+            )
+        }
     }
 }
 
@@ -182,7 +197,7 @@ internal fun AnalysisScreen(
 private fun AnalysisHeader(briefingText: String) {
     Column {
         Text(
-            text = "INTELLIGENCE ANALYSIS",
+            text = "NEWS ANALYSIS",
             style = ResponsiveTypography.t3.copy(
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Normal,
@@ -334,5 +349,5 @@ private fun parseAnalysisSections(raw: String): List<Pair<String, String>> {
         }
     }
 
-    return listOf("INTELLIGENCE BRIEF" to cleaned)
+    return listOf("NEWS BRIEF" to cleaned)
 }

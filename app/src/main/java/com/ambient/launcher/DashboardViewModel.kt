@@ -5,44 +5,19 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.location.Geocoder
-import android.location.Location
-import android.location.LocationManager
-import android.annotation.SuppressLint
-import android.Manifest
-import android.content.pm.PackageManager
-import android.content.pm.LauncherApps
-import android.app.usage.UsageStatsManager
-import android.app.AppOpsManager
 import android.os.BatteryManager
-import android.os.Process
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.core.content.ContextCompat
+import com.ambient.launcher.data.repository.AppRepository
+import com.ambient.launcher.data.repository.FeedRepository
+import com.ambient.launcher.data.repository.WeatherRepository
 import com.ambient.launcher.home.AppInfo
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
-import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
-import org.xmlpull.v1.XmlPullParser
-import org.xmlpull.v1.XmlPullParserFactory
-import java.io.StringReader
-import java.time.Duration
-import java.time.Instant
-import java.time.OffsetDateTime
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.util.Locale
-import java.util.concurrent.TimeUnit
 
 data class RssFeedItem(
     val title: String,
@@ -80,24 +55,6 @@ internal data class FeedSource(
     val name: String,
     val url: String
 )
-
-private fun getFeedSources(context: Context): List<FeedSource> {
-    val prefs = context.getSharedPreferences("ambient_launcher_sections", Context.MODE_PRIVATE)
-    val json = prefs.getString("rss_sources_v3", null)
-    return if (json != null) {
-        runCatching {
-            val array = JSONArray(json)
-            buildList {
-                for (i in 0 until array.length()) {
-                    val obj = array.getJSONObject(i)
-                    add(FeedSource(obj.getString("name"), obj.getString("url").trim()))
-                }
-            }
-        }.getOrDefault(defaultFeedSources)
-    } else {
-        defaultFeedSources
-    }
-}
 
 internal val defaultFeedSources = listOf(
     // ── Global wire services ──────────────────────────────────────────────────
@@ -142,87 +99,6 @@ internal val defaultFeedSources = listOf(
     FeedSource("Public Domain Review", "https://publicdomainreview.org/feed/"),
 )
 
-// ---------------------------------------------------------------------------
-// Feed quality filters — pure functions, no network, no LLM
-// ---------------------------------------------------------------------------
-
-private object FeedFilter {
-    // Unambiguous sports-only terminology — deliberately narrow to avoid false positives
-    private val SPORTS_TERMS = setOf(
-        "premier league", "champions league", "europa league", "conference league",
-        "la liga", "serie a", "bundesliga", "ligue 1", "mls season",
-        "super bowl", "stanley cup", "world series", "nba finals", "nfl draft",
-        "grand slam", "wimbledon", "french open", "us open tennis",
-        "formula 1", "motogp race", "nascar",
-        "cricket test", "ashes series", " odi ", " t20 ",
-        "rugby union", "rugby league", "six nations",
-        "transfer window", "transfer fee", "signed for £", "signed for $",
-        "hat-trick", "hat trick", "own goal", "penalty shootout",
-        "quarterback", "touchdown", "linebacker", "slam dunk", "home run",
-        " ufc ", "heavyweight title fight", "weigh-in"
-    )
-
-    // Opinion/personal column markers — check as title prefix or full match
-    private val OPINION_PREFIXES = listOf(
-        "opinion:", "column:", "commentary:", "my view:", "perspective:",
-        "letters:", "letter to the editor", "your letters",
-        "why i ", "my ", "i think ", "what i "
-    )
-
-    // Formulaic clickbait constructions
-    private val CLICKBAIT_PATTERNS = listOf(
-        Regex("""^\d{1,2} (things|ways|reasons|tips|signs|facts)""", RegexOption.IGNORE_CASE),
-        Regex("""^here'?s (why|what|how|everything)""", RegexOption.IGNORE_CASE),
-        Regex("""you (won'?t believe|need to know|should know)""", RegexOption.IGNORE_CASE),
-        Regex("""everything you need to know""", RegexOption.IGNORE_CASE),
-        Regex("""^(watch|photos|video|gallery):""", RegexOption.IGNORE_CASE)
-    )
-
-    fun shouldInclude(item: RssFeedItem): Boolean {
-        val lower = item.title.lowercase()
-        return SPORTS_TERMS.none { lower.contains(it) }
-            && OPINION_PREFIXES.none { lower.startsWith(it) }
-            && CLICKBAIT_PATTERNS.none { it.containsMatchIn(item.title) }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Cross-source deduplication via Jaccard title similarity — no LLM required
-// ---------------------------------------------------------------------------
-
-private object FeedDeduplicator {
-    private val STOP_WORDS = setOf(
-        "the", "a", "an", "in", "on", "at", "to", "of", "for", "with",
-        "is", "are", "was", "were", "be", "been", "has", "have", "had",
-        "will", "would", "could", "should", "that", "this", "it", "its",
-        "and", "or", "but", "not", "as", "by", "from", "after", "over",
-        "new", "says", "said", "up", "down", "out", "than", "more", "than"
-    )
-
-    private fun fingerprint(title: String): Set<String> =
-        title.lowercase()
-            .replace(Regex("[^a-z0-9 ]"), " ")
-            .split(" ")
-            .filter { it.length > 2 && it !in STOP_WORDS }
-            .toSet()
-
-    private fun jaccard(a: Set<String>, b: Set<String>): Float {
-        if (a.isEmpty() || b.isEmpty()) return 0f
-        return a.intersect(b).size.toFloat() / (a + b).size
-    }
-
-    // Input should already be sorted newest-first; the first item in each cluster wins.
-    fun deduplicate(items: List<RssFeedItem>): List<RssFeedItem> {
-        val clusters = mutableListOf<Pair<RssFeedItem, Set<String>>>()
-        for (item in items) {
-            val fp = fingerprint(item.title)
-            val isDuplicate = clusters.any { (_, clusterFp) -> jaccard(fp, clusterFp) >= 0.40f }
-            if (!isDuplicate) clusters.add(item to fp)
-        }
-        return clusters.map { it.first }
-    }
-}
-
 internal class DashboardViewModel(
     application: Application
 ) : AndroidViewModel(application) {
@@ -230,7 +106,10 @@ internal class DashboardViewModel(
     private val appContext = application.applicationContext
     private val sharedPreferences =
         appContext.getSharedPreferences("ambient_dashboard_cache", Context.MODE_PRIVATE)
-    private val client = HttpClient.instance
+
+    private val appRepository = AppRepository(appContext)
+    private val weatherRepository = WeatherRepository(appContext)
+    private val feedRepository = FeedRepository(appContext)
 
     private val _feedItems = MutableStateFlow<List<RssFeedItem>>(emptyList())
     val feedItems: StateFlow<List<RssFeedItem>> = _feedItems.asStateFlow()
@@ -241,54 +120,7 @@ internal class DashboardViewModel(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
-    // Dead feed URLs → replacement mappings.  Applied once on startup to migrate saved prefs.
-    private val deadFeedReplacements = mapOf(
-        "feeds.ap.org" to ("NYT World" to "https://rss.nytimes.com/services/xml/rss/nyt/World.xml"),
-        "reutersagency.com" to ("Al Jazeera" to "https://www.aljazeera.com/xml/rss/all.xml"),
-        "feeds.reuters.com" to ("Al Jazeera" to "https://www.aljazeera.com/xml/rss/all.xml")
-    )
-
-    // Seed from SharedPreferences so the first refreshFeeds() on init uses real sources.
-    private var currentSources: List<Pair<String, String>> = run {
-        val prefs = appContext.getSharedPreferences("ambient_launcher_sections", Context.MODE_PRIVATE)
-        val json = prefs.getString("rss_sources_v3", null)
-        if (json != null) {
-            val parsed = runCatching {
-                val array = JSONArray(json)
-                buildList {
-                    for (i in 0 until array.length()) {
-                        val obj = array.getJSONObject(i)
-                        add(obj.getString("name") to obj.getString("url").trim())
-                    }
-                }
-            }.getOrNull()
-
-            // Migrate dead feeds in saved prefs
-            if (parsed != null) {
-                val migrated = parsed.map { (name, url) ->
-                    val replacement = deadFeedReplacements.entries.find { url.contains(it.key) }
-                    if (replacement != null) replacement.value else (name to url)
-                }
-                if (migrated != parsed) {
-                    // Persist the migration
-                    val array = JSONArray()
-                    migrated.forEach { (n, u) -> array.put(JSONObject().put("name", n).put("url", u)) }
-                    prefs.edit().putString("rss_sources_v3", array.toString()).apply()
-                }
-                migrated
-            } else null
-        } else null
-    } ?: defaultFeedSources.map { it.name to it.url }
-
-    fun setRssSources(sources: List<Pair<String, String>>) {
-        // Prevent refresh if sources are identical (by content, not reference)
-        val sourcesChanged = sources.size != currentSources.size ||
-                sources.zip(currentSources).any { (a, b) -> a != b }
-
-        if (!sourcesChanged) return
-        currentSources = sources
-        refreshFeeds()
-    }
+    private var currentSources: List<Pair<String, String>> = feedRepository.getSources()
 
     private val _weather = MutableStateFlow(WeatherUiState())
     val weather: StateFlow<WeatherUiState> = _weather.asStateFlow()
@@ -299,22 +131,13 @@ internal class DashboardViewModel(
     private val _batteryState = MutableStateFlow(BatteryUiState())
     val batteryState: StateFlow<BatteryUiState> = _batteryState.asStateFlow()
 
-    // Tracks the last known charging state to detect the moment the charger is removed.
-    // When a transition from charging→discharging is detected, we snapshot the current
-    // percentage as the "reset point" so the countdown always starts from the actual
-    // level you unplugged at, not an assumed 100%.
     private var lastWasCharging = false
     private var batteryReceiver: BroadcastReceiver? = null
-    private val feedFetchSemaphore = Semaphore(8)
 
     companion object {
-        // Measured discharge duration for this device: 29 hours 35 minutes.
         private const val TOTAL_DISCHARGE_HOURS = 29.583
         private const val PREFS_BATTERY = "battery_prefs"
         private const val KEY_RESET_PCT = "reset_pct"
-        // Max articles any single source can contribute to the final 30-item feed.
-        // Prevents high-frequency publishers (ABC, FT) from flooding the list.
-        private const val MAX_PER_SOURCE = 3
     }
 
     init {
@@ -323,6 +146,7 @@ internal class DashboardViewModel(
         loadInstalledApps()
         initBatteryMonitoring()
         refreshFeeds()
+        refreshWeather()
     }
 
     private fun initBatteryMonitoring() {
@@ -334,8 +158,6 @@ internal class DashboardViewModel(
             }
         }
         appContext.registerReceiver(batteryReceiver, filter)
-
-        // Seed the initial state immediately from the sticky broadcast.
         appContext.registerReceiver(null, filter)?.let { handleBatteryIntent(it) }
     }
 
@@ -349,7 +171,6 @@ internal class DashboardViewModel(
         val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
                 status == BatteryManager.BATTERY_STATUS_FULL
 
-        // Charger just removed → record this percentage (if we need it later)
         if (lastWasCharging && !isCharging) {
             appContext.getSharedPreferences(PREFS_BATTERY, Context.MODE_PRIVATE)
                 .edit()
@@ -359,7 +180,7 @@ internal class DashboardViewModel(
         lastWasCharging = isCharging
 
         val remainingHours = if (isCharging) 0.0
-        else TOTAL_DISCHARGE_HOURS * (pct.toDouble() / 100.0) // Bug fix: scale off absolute 100%
+        else TOTAL_DISCHARGE_HOURS * (pct.toDouble() / 100.0)
 
         _batteryState.value = BatteryUiState(
             percentage = pct,
@@ -378,63 +199,24 @@ internal class DashboardViewModel(
     }
 
     private fun loadInstalledApps() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val launcherApps = appContext.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
-            val profiles = launcherApps.profiles
-            
-            val apps = mutableListOf<AppInfo>()
-            for (profile in profiles) {
-                launcherApps.getActivityList(null, profile).forEach { info ->
-                    if (info.componentName.packageName != appContext.packageName) {
-                        val pkg = info.componentName.packageName
-                        val installTime = try {
-                            appContext.packageManager.getPackageInfo(pkg, 0).firstInstallTime
-                        } catch (_: Exception) { 0L }
-                        apps.add(AppInfo(label = info.label.toString(), packageName = pkg, firstInstallTime = installTime))
-                    }
-                }
-            }
-            
-            // Sort by usage stats if permission is granted, otherwise alphabetical
-            val sortedApps = sortAppsByUsage(apps)
-            
-            _installedApps.value = sortedApps.distinctBy { it.packageName }
+        viewModelScope.launch {
+            _installedApps.value = appRepository.getInstalledApps()
         }
     }
 
-    private fun sortAppsByUsage(apps: List<AppInfo>): List<AppInfo> {
-        val appOps = appContext.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
-        val mode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            appOps.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), appContext.packageName)
-        } else {
-            @Suppress("DEPRECATION")
-            appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), appContext.packageName)
-        }
+    fun setRssSources(sources: List<Pair<String, String>>) {
+        val sourcesChanged = sources.size != currentSources.size ||
+                sources.zip(currentSources).any { (a, b) -> a != b }
 
-        if (mode != AppOpsManager.MODE_ALLOWED) {
-            return apps.sortedBy { it.label.lowercase() }
-        }
-
-        val usageStatsManager = appContext.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-        val endTime = System.currentTimeMillis()
-        val startTime = endTime - java.util.concurrent.TimeUnit.DAYS.toMillis(3) // Last 3 days
-
-        val stats = usageStatsManager.queryAndAggregateUsageStats(startTime, endTime)
-        
-        return apps.sortedByDescending { app ->
-            stats[app.packageName]?.totalTimeInForeground ?: 0L
-        }
+        if (!sourcesChanged) return
+        currentSources = sources
+        feedRepository.saveSources(sources)
+        refreshFeeds()
     }
 
     fun refreshWeather() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val location = getLastKnownLocation()
-            val (latitude, longitude, locationName) = if (location != null) {
-                Triple(location.latitude, location.longitude, resolveLocationName(location))
-            } else {
-                Triple(-33.8688, 151.2093, "Sydney")
-            }
-            val weather = fetchWeather(latitude, longitude, locationName)
+        viewModelScope.launch {
+            val weather = weatherRepository.fetchWeather()
             if (weather != null) {
                 saveCachedWeather(weather)
                 _weather.value = weather
@@ -445,30 +227,12 @@ internal class DashboardViewModel(
     fun refreshFeeds() {
         if (_isRefreshing.value) return
         _isRefreshing.value = true
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             try {
-                val channel = Channel<List<RssFeedItem>>(capacity = Channel.UNLIMITED)
-
-                val jobs = currentSources.map { (name, url) ->
-                    async {
-                        val items = feedFetchSemaphore.withPermit {
-                            fetchFeedItems(FeedSource(name, url.trim()))
-                        }
-                        channel.send(items)
-                    }
-                }
-                // Close channel once every source has responded (or timed out)
-                launch { jobs.awaitAll(); channel.close() }
-
-                // Stream: update the feed as each source arrives rather than waiting for all 55
-                for (incoming in channel) {
-                    if (incoming.isEmpty()) continue
-                    
-                    // Merge incoming items with current state so fast sources populate immediately
-                    // and new items naturally rise to the top
+                feedRepository.fetchFeeds(currentSources) { incoming ->
                     val currentList = _feedItems.value
                     val combined = currentList + incoming
-                    val processed = buildFreshFeed(combined)
+                    val processed = feedRepository.buildFreshFeed(combined)
                     
                     if (processed.isNotEmpty()) {
                         _feedItems.value = processed
@@ -476,7 +240,6 @@ internal class DashboardViewModel(
                     }
                 }
 
-                // Persist the final settled feed to cache
                 val final = _feedItems.value
                 if (final.isNotEmpty()) saveCachedFeeds(final)
             } finally {
@@ -485,269 +248,12 @@ internal class DashboardViewModel(
         }
     }
 
-    private fun buildFreshFeed(raw: List<RssFeedItem>): List<RssFeedItem> {
-        val now = System.currentTimeMillis()
-        val strictCutoff = now - TimeUnit.HOURS.toMillis(48)
-        val relaxedCutoff = now - TimeUnit.DAYS.toMillis(14) // 2 weeks for slow publishers
-
-        // 1. Initial filter & deduplication
-        val filtered = raw
-            .filter { it.publishedAtEpochMillis > 0L }
-            .filter { it.publishedAtEpochMillis >= relaxedCutoff }
-            .filter { FeedFilter.shouldInclude(it) }
-            .sortedByDescending { it.publishedAtEpochMillis }
-            
-        val deduped = FeedDeduplicator.deduplicate(filtered).distinctBy { it.url }
-
-        // 2. Group by source
-        // Since 'deduped' is already sorted chronologically, the lists inside this map 
-        // will also be correctly ordered newest-to-oldest per source.
-        val bySource = deduped.groupBy { it.source }
-
-        val finalSelection = mutableListOf<RssFeedItem>()
-        var depth = 0
-
-        // Source publication frequency: sources that post fewer articles total
-        // are considered "infrequent" and get a boost so they surface before
-        // high-frequency publishers like wire services.
-        val sourceFrequency = bySource.mapValues { (_, items) -> items.size }
-        val maxFrequency = sourceFrequency.values.maxOrNull()?.toFloat() ?: 1f
-
-        // Cap scales with sources: 2 items per active source, capped at 80 to keep the list readable.
-        val feedCap = (bySource.size * 2).coerceIn(30, 80)
-
-        // 3. Round-robin allocation
-        // Pick the 1st story from every source, then the 2nd, up to MAX_PER_SOURCE
-        while (finalSelection.size < feedCap && depth < MAX_PER_SOURCE && bySource.values.any { it.size > depth }) {
-            val candidates = bySource.values
-                .mapNotNull { itemsForSource ->
-                    val item = itemsForSource.getOrNull(depth) ?: return@mapNotNull null
-
-                    if (depth == 0 || item.publishedAtEpochMillis >= strictCutoff) {
-                        item
-                    } else {
-                        null
-                    }
-                }
-                // Infrequent sources rank first; within same frequency, sort by freshness.
-                .sortedWith(compareBy(
-                    { sourceFrequency[it.source] ?: 0 },
-                    { -it.publishedAtEpochMillis }
-                ))
-
-            for (item in candidates) {
-                if (finalSelection.size >= feedCap) break
-                finalSelection.add(item)
-            }
-            depth++
-        }
-
-        // 4. Final chronological sort for the UI presentation
-        return finalSelection.sortedByDescending { it.publishedAtEpochMillis }
-    }
-
     fun addFeedSource(name: String, url: String) {
-        val prefs = appContext.getSharedPreferences("ambient_launcher_sections", Context.MODE_PRIVATE)
-        val sources = getFeedSources(appContext).toMutableList()
-        sources.add(FeedSource(name, url.trim()))
-        
-        val array = JSONArray()
-        sources.forEach { 
-            array.put(JSONObject().put("name", it.name).put("url", it.url))
-        }
-        prefs.edit().putString("rss_sources_v3", array.toString()).apply()
+        val sources = feedRepository.getSources().toMutableList()
+        sources.add(name to url.trim())
+        feedRepository.saveSources(sources)
+        currentSources = sources
         refreshFeeds()
-    }
-
-    private fun fetchFeedItems(source: FeedSource): List<RssFeedItem> {
-        val request = Request.Builder()
-            .url(source.url)
-            // Browser-like UA required — Google News RSS silently returns empty/403 for custom agents
-            .header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
-            .header("Accept", "application/rss+xml, application/xml, text/xml, */*")
-            .build()
-
-        return runCatching {
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return emptyList()
-                val body = response.body?.string().orEmpty()
-                if (body.isBlank()) return emptyList()
-                parseFeedItems(xml = body, source = source.name)
-            }
-        }.getOrDefault(emptyList())
-    }
-
-    private fun parseFeedItems(xml: String, source: String): List<RssFeedItem> {
-        val items = mutableListOf<RssFeedItem>()
-        return runCatching {
-            val factory = XmlPullParserFactory.newInstance()
-            factory.isNamespaceAware = true
-            val parser = factory.newPullParser()
-            parser.setInput(StringReader(xml))
-
-            var eventType = parser.eventType
-            var inItem = false
-            var title = ""
-            var link = ""
-            var pubDate = ""
-
-            while (eventType != XmlPullParser.END_DOCUMENT) {
-                val localName = parser.name ?: ""
-                when (eventType) {
-                    XmlPullParser.START_TAG -> {
-                        if (localName.equals("item", ignoreCase = true) || localName.equals("entry", ignoreCase = true)) {
-                            inItem = true
-                        } else if (inItem) {
-                            when {
-                                localName.equals("title", ignoreCase = true) -> title = safeNextText(parser)
-                                localName.equals("link", ignoreCase = true) -> {
-                                    val rel = parser.getAttributeValue(null, "rel")
-                                    val href = parser.getAttributeValue(null, "href")
-                                    if (href != null) {
-                                        // Atom: preferred rel="alternate", or no rel
-                                        if (rel == null || rel == "alternate") {
-                                            link = href
-                                        }
-                                    } else {
-                                        // RSS: simple link body
-                                        link = safeNextText(parser)
-                                    }
-                                }
-                                localName.equals("pubDate", ignoreCase = true) || 
-                                localName.equals("published", ignoreCase = true) || 
-                                localName.equals("updated", ignoreCase = true) ||
-                                localName.equals("date", ignoreCase = true) -> {
-                                    pubDate = safeNextText(parser)
-                                }
-                            }
-                        }
-                    }
-                    XmlPullParser.END_TAG -> {
-                        if (localName.equals("item", ignoreCase = true) || localName.equals("entry", ignoreCase = true)) {
-                            if (title.isNotBlank() && link.isNotBlank()) {
-                                items.add(
-                                    RssFeedItem(
-                                        title = title.trim(),
-                                        source = source,
-                                        timestamp = parseTimeAgo(pubDate),
-                                        url = link.trim(),
-                                        publishedAtEpochMillis = parseEpochMillis(pubDate)
-                                    )
-                                )
-                            }
-                            inItem = false
-                            title = ""
-                            link = ""
-                            pubDate = ""
-                            
-                            if (items.size >= 8) break  // 8/source; quality over volume
-                        }
-                    }
-                }
-                eventType = parser.next()
-            }
-            items
-        }.getOrDefault(emptyList())
-    }
-
-    private fun safeNextText(parser: XmlPullParser): String {
-        return runCatching { parser.nextText() }.getOrDefault("")
-    }
-
-    private fun parseEpochMillis(dateStr: String): Long {
-        if (dateStr.isBlank()) return 0L
-        val trimmed = dateStr.trim()
-        return runCatching {
-            // RSS standard
-            ZonedDateTime.parse(trimmed, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli()
-        }.recoverCatching {
-            // Atom standard / ISO
-            OffsetDateTime.parse(trimmed).toInstant().toEpochMilli()
-        }.recoverCatching {
-            // Common variation: "2024-05-23 12:00:00"
-            val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(java.time.ZoneId.of("UTC"))
-            ZonedDateTime.parse(trimmed, fmt).toInstant().toEpochMilli()
-        }.getOrDefault(0L)  // 0L = unknown date; excluded by freshness gate in refreshFeeds
-    }
-
-    private fun parseTimeAgo(dateStr: String): String {
-        if (dateStr.isBlank()) return ""
-        return runCatching {
-            val instant = Instant.ofEpochMilli(parseEpochMillis(dateStr))
-            val now = Instant.now()
-            val duration = Duration.between(instant, now)
-            when {
-                duration.toDays() > 0 -> "${duration.toDays()}d"
-                duration.toHours() > 0 -> "${duration.toHours()}h"
-                duration.toMinutes() > 0 -> "${duration.toMinutes()}m"
-                else -> "now"
-            }
-        }.getOrDefault("")
-    }
-
-    private fun fetchWeather(
-        latitude: Double,
-        longitude: Double,
-        locationName: String
-    ): WeatherUiState? {
-        val url = buildString {
-            append("https://api.open-meteo.com/v1/forecast?")
-            append("latitude=$latitude")
-            append("&longitude=$longitude")
-            append("&current=temperature_2m,weather_code")
-            append("&daily=temperature_2m_max,temperature_2m_min,weather_code")
-            append("&forecast_days=4")
-            append("&timezone=auto")
-        }
-
-        val request = Request.Builder()
-            .url(url)
-            .header("User-Agent", "AmbientLauncher/1.0")
-            .build()
-
-        return runCatching {
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return null
-                val body = response.body?.string().orEmpty()
-                if (body.isBlank()) return null
-
-                val root = JSONObject(body)
-                val current = root.getJSONObject("current")
-                val daily = root.getJSONObject("daily")
-
-                val temp = current.getDouble("temperature_2m").toInt()
-                val code = current.getInt("weather_code")
-                
-                val maxTemps = daily.getJSONArray("temperature_2m_max")
-                val minTemps = daily.getJSONArray("temperature_2m_min")
-                val weatherCodes = daily.getJSONArray("weather_code")
-                val timeArray = daily.getJSONArray("time")
-
-                val forecast = mutableListOf<ForecastDay>()
-                // Today is index 0, so next 3 days are 1, 2, 3
-                for (i in 1 until 4) {
-                    val date = java.time.LocalDate.parse(timeArray.getString(i))
-                    forecast.add(
-                        ForecastDay(
-                            dayName = date.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.ENGLISH),
-                            maxTemp = maxTemps.getDouble(i).toInt(),
-                            minTemp = minTemps.getDouble(i).toInt(),
-                            weatherCode = weatherCodes.getInt(i)
-                        )
-                    )
-                }
-
-                WeatherUiState(
-                    temperatureText = "$temp°",
-                    rangeText = "H:${maxTemps.getDouble(0).toInt()}° L:${minTemps.getDouble(0).toInt()}°",
-                    summary = weatherCodeToSummary(code),
-                    locationName = locationName,
-                    isAvailable = true,
-                    currentCode = code,
-                    forecast = forecast
-                )
-            }
-        }.getOrNull()
     }
 
     private fun loadCachedWeather() {
@@ -807,7 +313,6 @@ internal class DashboardViewModel(
     }
 
     private fun loadCachedFeeds() {
-        // Implement Cache TTL (15 minutes) to prevent staring at stale data
         val expiry = 15 * 60 * 1000L
         val cacheTime = sharedPreferences.getLong("feed_items_timestamp_v1", 0L)
         if (System.currentTimeMillis() - cacheTime > expiry) return
@@ -855,96 +360,5 @@ internal class DashboardViewModel(
             .putString("feed_items_v1", array.toString())
             .putLong("feed_items_timestamp_v1", System.currentTimeMillis())
             .apply()
-    }
-
-    @SuppressLint("MissingPermission")
-    private suspend fun getLastKnownLocation(): Location? {
-        val hasCoarse = ContextCompat.checkSelfPermission(
-            appContext,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-        val hasFine = ContextCompat.checkSelfPermission(
-            appContext,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-
-        if (!hasCoarse && !hasFine) return null
-
-        val locationManager = appContext.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
-            ?: return null
-
-        // Try getting an active current location if possible (API 30+)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-            try {
-                return kotlinx.coroutines.suspendCancellableCoroutine { cont ->
-                    val cancellationSignal = android.os.CancellationSignal()
-                    cont.invokeOnCancellation { cancellationSignal.cancel() }
-                    
-                    locationManager.getCurrentLocation(
-                        LocationManager.NETWORK_PROVIDER,
-                        cancellationSignal,
-                        appContext.mainExecutor
-                    ) { location ->
-                        if (location != null) {
-                            cont.resume(location, null)
-                        } else {
-                            cont.resume(null, null)
-                        }
-                    }
-                } ?: getBestLastKnown(locationManager)
-            } catch (e: Exception) {
-                return getBestLastKnown(locationManager)
-            }
-        }
-
-        return getBestLastKnown(locationManager)
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun getBestLastKnown(locationManager: LocationManager): Location? {
-        val providers = locationManager.getProviders(true)
-        var bestLocation: Location? = null
-        for (provider in providers) {
-            val l = locationManager.getLastKnownLocation(provider) ?: continue
-            if (bestLocation == null || l.accuracy < bestLocation.accuracy) {
-                bestLocation = l
-            }
-        }
-        return bestLocation
-    }
-
-    private fun resolveLocationName(location: Location): String {
-        val geocoder = Geocoder(appContext, Locale.getDefault())
-        return runCatching {
-            @Suppress("DEPRECATION")
-            geocoder.getFromLocation(location.latitude, location.longitude, 1)
-                ?.firstOrNull()
-                ?.let { address ->
-                    address.locality
-                        ?: address.subAdminArea
-                        ?: address.adminArea
-                        ?: address.countryName
-                }
-        }.getOrNull().orEmpty()
-    }
-
-    private fun weatherCodeToSummary(code: Int): String {
-        return when (code) {
-            0 -> "Clear"
-            1, 2 -> "Mostly clear"
-            3 -> "Cloudy"
-            45, 48 -> "Fog"
-            51, 53, 55 -> "Drizzle"
-            56, 57 -> "Freezing Drizzle"
-            61, 63, 65 -> "Rain"
-            66, 67 -> "Freezing Rain"
-            71, 73, 75 -> "Snow"
-            77 -> "Snow grains"
-            80, 81, 82 -> "Rain showers"
-            85, 86 -> "Snow showers"
-            95 -> "Thunderstorm"
-            96, 99 -> "Thunderstorm with hail"
-            else -> "Unknown"
-        }
     }
 }

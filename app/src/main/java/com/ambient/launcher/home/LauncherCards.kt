@@ -25,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -208,6 +209,7 @@ internal fun ProjectCard(
 internal fun AiBriefingSection(
     briefing: String?,
     isBriefingLoading: Boolean = false,
+    briefingHasError: Boolean = false,
     isAnalysisLoading: Boolean = false,
     isAnalysisReady: Boolean = false,
     analysisHasError: Boolean = false,
@@ -218,9 +220,11 @@ internal fun AiBriefingSection(
     val displayText = when {
         !briefing.isNullOrBlank() -> briefing
         isBriefingLoading -> "Refreshing..."
+        briefingHasError -> "ERROR: Briefing failed"
         else -> "No data"
     }
-    val textAlpha = if (briefing.isNullOrBlank()) 0.35f else 0.95f
+    val textAlpha = if (briefing.isNullOrBlank() && !briefingHasError) 0.35f else 0.95f
+    val textColor = if (briefingHasError) AmbientTheme.palette.errorAccent else AmbientTheme.palette.textPrimary
 
     val label = when {
         isAnalysisLoading -> "AWAITING..."
@@ -249,7 +253,7 @@ internal fun AiBriefingSection(
             Text(
                 text = displayText,
                 style = ResponsiveTypography.t2,
-                color = AmbientTheme.palette.textPrimary.copy(alpha = textAlpha),
+                color = textColor.copy(alpha = textAlpha),
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
@@ -324,8 +328,9 @@ internal fun HeadlinesSection(
 @Composable
 private fun TimestampFooter(lastRefreshTime: Long) {
     if (lastRefreshTime <= 0L) return
+    val elapsed = remember(lastRefreshTime) { formatElapsed(lastRefreshTime) }
     Text(
-        text = "updated ${formatElapsed(lastRefreshTime)}",
+        text = "updated $elapsed",
         style = ResponsiveTypography.t3,
         color = AmbientTheme.palette.textSecondary.copy(alpha = 0.35f),
         textAlign = TextAlign.End,
@@ -343,6 +348,16 @@ private fun HeadlineItem(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null
 ) {
+    val sourceColorNonComposable = remember(source) { getSourceColorNonComposable(source) }
+    val sourceColor = if (sourceColorNonComposable == Color.Unspecified) {
+        AmbientTheme.palette.textSecondary
+    } else {
+        sourceColorNonComposable
+    }
+    val elapsed = remember(publishedAtEpochMillis) { 
+        if (publishedAtEpochMillis > 0L) formatElapsed(publishedAtEpochMillis) else "" 
+    }
+    
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -362,13 +377,13 @@ private fun HeadlineItem(
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.2.sp,
-                    color = getSourceColor(source).copy(alpha = 0.85f),
+                    color = sourceColor.copy(alpha = 0.85f),
                     modifier = Modifier.weight(1f)
                 )
             }
             if (publishedAtEpochMillis > 0L) {
                 Text(
-                    text = formatElapsed(publishedAtEpochMillis),
+                    text = elapsed,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Normal,
                     color = AmbientTheme.palette.textPrimary.copy(alpha = 0.4f),
@@ -391,8 +406,7 @@ private fun HeadlineItem(
     }
 }
 
-@Composable
-private fun getSourceColor(source: String): Color {
+private fun getSourceColorNonComposable(source: String): Color {
     return when {
         source.contains("BBC", ignoreCase = true) -> Color(0xFF6B8CFF)  // Blue
         source.contains("Guardian", ignoreCase = true) -> Color(0xFF999999)  // Grey
@@ -402,8 +416,14 @@ private fun getSourceColor(source: String): Color {
         source.contains("Politico", ignoreCase = true) -> Color(0xFFE81B23)  // Politico Red
         source.contains("Ars Technica", ignoreCase = true) -> Color(0xFFFF6633)  // Rust
         source.contains("Hacker News", ignoreCase = true) -> Color(0xFFFF6633)  // Rust
-        else -> AmbientTheme.palette.textSecondary
+        else -> Color.Unspecified // Default will be handled by the caller
     }
+}
+
+@Composable
+private fun getSourceColor(source: String): Color {
+    val color = getSourceColorNonComposable(source)
+    return if (color == Color.Unspecified) AmbientTheme.palette.textSecondary else color
 }
 
 @Composable
@@ -415,6 +435,12 @@ internal fun BentoTileGrid(
 ) {
     val gap = LauncherLayout.tileGap
     val rows = remember(apps, tileSizes) { packIntoRows(apps, tileSizes) }
+    val palette = AmbientTheme.palette
+    val bucketFilters = remember(palette) {
+        LauncherBucket.values().associateWith { bucket ->
+            getAmbientIconFilterNonComposable(bucket.themeColor(palette), palette.iconOverlayOpacity)
+        }
+    }
 
     BoxWithConstraints(
         modifier = Modifier
@@ -432,16 +458,20 @@ internal fun BentoTileGrid(
                     for (app in row) {
                         val size = tileSizes[app.packageName] ?: TileSize.REGULAR
                         val tileWidth = if (size == TileSize.WIDE) tileUnit * 2 + gap else tileUnit
+                        val colorFilter = bucketFilters[app.bucket]
                         
-                        BentoAppTile(
-                            app = app,
-                            size = size,
-                            modifier = Modifier
-                                .width(tileWidth)
-                                .height(tileUnit),
-                            onClick = { onAppClick(app) },
-                            onLongClick = { onAppLongClick(app) }
-                        )
+                        key(app.packageName) {
+                            BentoAppTile(
+                                app = app,
+                                size = size,
+                                colorFilter = colorFilter,
+                                modifier = Modifier
+                                    .width(tileWidth)
+                                    .height(tileUnit),
+                                onClick = { onAppClick(app) },
+                                onLongClick = { onAppLongClick(app) }
+                            )
+                        }
                     }
                     val usedSlots = row.sumOf { app ->
                         if ((tileSizes[app.packageName] ?: TileSize.REGULAR) == TileSize.WIDE) 2 else 1
@@ -504,6 +534,7 @@ private fun packIntoRows(
 private fun BentoAppTile(
     app: AppInfo,
     size: TileSize,
+    colorFilter: ColorFilter?,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
     onLongClick: () -> Unit
@@ -522,29 +553,20 @@ private fun BentoAppTile(
 
         val iconSize = if (size == TileSize.SMALL) 18.dp else 26.dp 
         val padding = if (size == TileSize.SMALL) 8.dp else 12.dp
-        val bucketColor = app.bucket.themeColor(AmbientTheme.palette)
         
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = padding, vertical = padding)
         ) {
-            val iconBitmap = rememberAppIcon(packageName = app.packageName)
-            Box(
-                modifier = Modifier.align(Alignment.TopStart).size(iconSize),
-                contentAlignment = Alignment.Center
-            ) {
-                iconBitmap?.let {
-                    androidx.compose.foundation.Image(
-                        bitmap = it,
-                        contentDescription = app.label,
-                        modifier = Modifier
-                            .size(iconSize)
-                            .clip(RoundedCornerShape(4.dp)),
-                        colorFilter = getAmbientIconFilter(bucketColor)
-                    )
-                }
-            }
+            AppIcon(
+                packageName = app.packageName,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .size(iconSize)
+                    .clip(RoundedCornerShape(4.dp)),
+                colorFilter = colorFilter
+            )
 
             Text(
                 text = app.label,

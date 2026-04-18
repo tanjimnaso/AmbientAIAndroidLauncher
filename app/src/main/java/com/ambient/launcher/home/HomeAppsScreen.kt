@@ -227,7 +227,6 @@ private fun HomeAppIcon(
     isDragged: Boolean,
     onClick: () -> Unit
 ) {
-    val iconBitmap  = rememberAppIcon(app.packageName)
     val bucketColor = app.bucket.themeColor(AmbientTheme.palette)
 
     Column(
@@ -248,17 +247,10 @@ private fun HomeAppIcon(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            iconBitmap?.let {
-                Image(
-                    bitmap           = it,
-                    contentDescription = app.label,
-                    modifier         = Modifier.size(44.dp),
-                    colorFilter      = getAmbientIconFilter(bucketColor)
-                )
-            } ?: Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .background(AmbientTheme.palette.tileBackground, RoundedCornerShape(12.dp))
+            AppIcon(
+                packageName = app.packageName,
+                modifier = Modifier.size(44.dp),
+                colorFilter = getAmbientIconFilter(bucketColor)
             )
         }
 

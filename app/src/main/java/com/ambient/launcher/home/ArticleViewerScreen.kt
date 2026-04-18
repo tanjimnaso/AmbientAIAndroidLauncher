@@ -1,286 +1,283 @@
 package com.ambient.launcher.home
 
-import android.net.Uri
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
-import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.awaitHorizontalTouchSlopOrCancellation
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.ambient.launcher.RssFeedItem
+import com.ambient.launcher.tts.TtsIconButton
 import com.ambient.launcher.ui.theme.AmbientTheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.Request
+import net.dankito.readability4j.Readability4J
 import org.jsoup.Jsoup
-
-// Sites that require JS + cookies for login — use WebView instead of the reader parser.
-private val WEBVIEW_DOMAINS = setOf(
-    "ft.com", "financialtimes.com",
-    "wsj.com", "economist.com",
-    "bloomberg.com", "thetimes.co.uk",
-    "telegraph.co.uk", "newyorker.com"
-)
-
-private fun requiresWebView(url: String): Boolean =
-    WEBVIEW_DOMAINS.any { domain -> url.contains(domain, ignoreCase = true) }
-
-data class ArticleContent(
-    val headline: String,
-    val author: String,
-    val publishedDate: String,
-    val bodyParagraphs: List<String>
-)
-
-object ReadingModeParser {
-    fun parse(html: String): ArticleContent {
-        val doc = Jsoup.parse(html)
-
-        val headline = doc.select("h1").firstOrNull()?.text()
-            ?: doc.select("meta[property=og:title]").attr("content").takeIf { it.isNotBlank() }
-            ?: doc.select("title").text()
-
-        val author = doc.select("meta[name=author]").attr("content").takeIf { it.isNotBlank() }
-            ?: doc.select("[class*=author], [rel=author]").firstOrNull()?.text()
-            ?: doc.select("meta[name=creator]").attr("content").takeIf { it.isNotBlank() }
-            ?: ""
-
-        val publishedDate = doc.select("meta[property=article:published_time]").attr("content").takeIf { it.isNotBlank() }
-            ?: doc.select("meta[name=publish_date]").attr("content").takeIf { it.isNotBlank() }
-            ?: doc.select("time").attr("datetime").takeIf { it.isNotBlank() }
-            ?: doc.select("[class*=date], [class*=published]").firstOrNull()?.text()
-            ?: ""
-
-        val body = doc.select("article").firstOrNull()
-            ?: doc.select("main").firstOrNull()
-            ?: doc.select("[class*=article-body], [class*=article__body]").firstOrNull()
-            ?: doc.select("[class*=essay-body], [class*=essay__body]").firstOrNull()
-            ?: doc.select("[class*=post-content], [class*=entry-content]").firstOrNull()
-            ?: doc.select("[class*=story-body], [class*=page-content]").firstOrNull()
-            ?: doc.select("[class*=content]").firstOrNull()
-            ?: doc.select("body").first()
-
-        val paragraphs = body?.select("p")
-            ?.map { it.text() }
-            ?.filter { text ->
-                text.length > 30 &&
-                !text.contains("Cookie", ignoreCase = true) &&
-                !text.contains("Subscribe", ignoreCase = true) &&
-                !text.contains("JavaScript", ignoreCase = true) &&
-                !text.contains("sign up", ignoreCase = true) &&
-                !text.contains("newsletter", ignoreCase = true)
-            }
-            ?.take(60)
-            ?: emptyList()
-
-        return ArticleContent(
-            headline = (headline ?: "Article").trim(),
-            author = author.trim(),
-            publishedDate = publishedDate.trim(),
-            bodyParagraphs = paragraphs
-        )
-    }
-}
+import kotlin.math.max
 
 @Composable
 fun ArticleViewerScreen(
     article: RssFeedItem,
     onDismiss: () -> Unit
 ) {
-    val context = LocalContext.current
-    if (requiresWebView(article.url)) {
-        // Chrome Custom Tabs: shares Chrome's cookie jar, Google OAuth allowed.
-        // Launch immediately then dismiss back to the launcher.
-        LaunchedEffect(article.url) {
-            val backgroundColor = AmbientTheme  // can't read palette outside composition
-            CustomTabsIntent.Builder()
-                .setShowTitle(true)
-                .build()
-                .launchUrl(context, Uri.parse(article.url))
-            onDismiss()
-        }
-        return
-    }
-
-    var content by remember { mutableStateOf<ArticleContent?>(null) }
+    val palette = AmbientTheme.palette
+    
+    // Extract content using Readability4J
+    var cleanedHtml by remember { mutableStateOf<String?>(null) }
+    var plainText by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+
+    // Convert current palette colors to CSS-friendly hex strings
+    val backgroundColorHex = String.format("#%06X", (0xFFFFFF and palette.mainBackground.toArgb()))
+    val textColorHex = String.format("#%06X", (0xFFFFFF and palette.textPrimary.toArgb()))
+    val textSecondaryColorHex = String.format("#%06X", (0xFFFFFF and palette.textSecondary.toArgb()))
+    val accentColorHex = String.format("#%06X", (0xFFFFFF and palette.accentHigh.toArgb()))
+
+    val customCss = """
+        body { 
+            background-color: $backgroundColorHex; 
+            color: $textColorHex;
+            font-family: 'Inter', -apple-system, sans-serif;
+            line-height: 1.8;
+            padding: 40px 24px 100px 24px;
+            margin: 0;
+            font-size: 16px;
+        }
+        h1 {
+            color: $textColorHex;
+            font-size: 26px;
+            line-height: 1.2;
+            margin-bottom: 8px;
+            font-weight: 800;
+        }
+        .metadata {
+            color: $textSecondaryColorHex;
+            font-size: 14px;
+            margin-bottom: 32px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        h2, h3 { color: $accentColorHex; margin-top: 1.8em; }
+        a { color: $accentColorHex; text-decoration: none; border-bottom: 1px solid ${accentColorHex}44; }
+        img { 
+            max-width: 100%; 
+            height: auto; 
+            border-radius: 12px; 
+            margin: 32px 0;
+            display: block;
+        }
+        p { margin-bottom: 1.6em; }
+        pre, code {
+            background: ${textSecondaryColorHex}15;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        blockquote {
+            border-left: 4px solid $accentColorHex;
+            margin: 0;
+            padding-left: 20px;
+            font-style: italic;
+            color: $textSecondaryColorHex;
+        }
+    """.trimIndent()
 
     LaunchedEffect(article.url) {
         isLoading = true
         error = null
-        content = null
         try {
-            val html = withContext(Dispatchers.IO) { fetchArticleHtml(article.url) }
-            if (html.isNotBlank()) {
-                content = withContext(Dispatchers.Default) { ReadingModeParser.parse(html) }
-            } else {
-                error = "Could not load article"
+            val result = withContext(Dispatchers.IO) {
+                val doc = Jsoup.connect(article.url)
+                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+                    .get()
+
+                val readability = Readability4J(article.url, doc.html())
+                val parsedArticle = readability.parse()
+
+                val articleContent = parsedArticle.content ?: "Unable to extract article content."
+                val articleTitle = parsedArticle.title ?: article.title
+                val narration = "$articleTitle. ${parsedArticle.textContent.orEmpty()}"
+
+                val html = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                    <style>$customCss</style>
+                </head>
+                <body>
+                    <h1>$articleTitle</h1>
+                    <div class="metadata">${article.source} • ${article.timestamp}</div>
+                    $articleContent
+                </body>
+                </html>
+                """.trimIndent()
+                html to narration
             }
+            cleanedHtml = result.first
+            plainText = result.second
         } catch (e: Exception) {
-            error = "Error: ${e.message}"
+            error = e.message ?: "Failed to load article"
         } finally {
             isLoading = false
         }
     }
 
+    val scope = rememberCoroutineScope()
+    val dragOffset = remember { Animatable(0f) }
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    val screenWidthPx = with(androidx.compose.ui.platform.LocalDensity.current) { screenWidth.toPx() }
+
     BackHandler { onDismiss() }
 
-    // Background fills the full screen including camera cutout and system bars
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(AmbientTheme.palette.drawerBackground)
-            .pointerInput(Unit) {
-                detectHorizontalDragGestures { _, dragAmount ->
-                    if (dragAmount > 100f) onDismiss()
+            .background(palette.mainBackground)
+            .navigationBarsPadding()
+            .statusBarsPadding()
+            // Apply visual feedback: slide and fade
+            .offset { IntOffset(dragOffset.value.toInt().coerceAtLeast(0), 0) }
+            .alpha((1f - (dragOffset.value / screenWidthPx) * 0.5f).coerceIn(0f, 1f))
+            .pointerInput(onDismiss) {
+                val edgePx = 24.dp.toPx()
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    // Only engage if the touch started near the left edge.
+                    if (down.position.x > edgePx) return@awaitEachGesture
+
+                    val velocityTracker = VelocityTracker()
+                    velocityTracker.addPosition(down.uptimeMillis, down.position)
+
+                    // Wait until horizontal slop is exceeded; vertical drags pass through to WebView.
+                    val slopChange = awaitHorizontalTouchSlopOrCancellation(down.id) { change, over ->
+                        if (over > 0f) change.consume()
+                    } ?: return@awaitEachGesture
+
+                    velocityTracker.addPosition(slopChange.uptimeMillis, slopChange.position)
+                    scope.launch { dragOffset.snapTo(max(0f, slopChange.position.x - down.position.x)) }
+
+                    // Now we own the gesture — track until release.
+                    var active = true
+                    while (active) {
+                        val event = awaitPointerEvent()
+                        val drag = event.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!drag.pressed) { active = false; break }
+                        velocityTracker.addPosition(drag.uptimeMillis, drag.position)
+                        val delta = drag.positionChange().x
+                        val next = (dragOffset.value + delta).coerceAtLeast(0f)
+                        scope.launch { dragOffset.snapTo(next) }
+                        drag.consume()
+                    }
+
+                    val velocity = velocityTracker.calculateVelocity().x
+                    if (dragOffset.value > screenWidthPx * 0.3f || velocity > 800f) {
+                        scope.launch {
+                            dragOffset.animateTo(screenWidthPx)
+                            onDismiss()
+                        }
+                    } else {
+                        scope.launch { dragOffset.animateTo(0f) }
+                    }
                 }
             }
     ) {
-        when {
-            isLoading -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = AmbientTheme.palette.accentHigh)
+        Crossfade(targetState = isLoading to error, label = "ContentState") { (loading, err) ->
+            when {
+                loading -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = palette.accentHigh)
+                    }
                 }
-            }
-
-            error != null -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
+                err != null -> {
                     Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        Modifier.fillMaxSize().padding(32.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            text = error ?: "Unknown error",
-                            style = ResponsiveTypography.t2,
-                            color = AmbientTheme.palette.errorAccent
-                        )
-                        Text(
-                            text = "Swipe right to return",
-                            style = ResponsiveTypography.t3,
-                            color = AmbientTheme.palette.textSecondary.copy(alpha = 0.6f)
-                        )
+                        Text("Ambient Reader", fontSize = 12.sp, color = palette.textSecondary)
+                        Spacer(Modifier.height(8.dp))
+                        Text("Unable to distill this article", fontWeight = FontWeight.Bold, color = palette.textPrimary)
+                        Spacer(Modifier.height(16.dp))
+                        Text(err, fontSize = 14.sp, color = palette.textSecondary)
                     }
                 }
-            }
-
-            content != null -> {
-                // Content column respects status bar + cutout, but background already fills everything
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .statusBarsPadding()
-                        .displayCutoutPadding()
-                        .padding(horizontal = 32.dp, vertical = 20.dp)
-                ) {
-                    item {
-                        Text(
-                            text = content!!.headline,
-                            style = ResponsiveTypography.d2,
-                            color = AmbientTheme.palette.textPrimary,
-                            modifier = Modifier.padding(bottom = 20.dp)
-                        )
-                    }
-
-                    item {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 32.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = article.source.uppercase(),
-                                style = ResponsiveTypography.t3.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                    letterSpacing = 0.8.sp
-                                ),
-                                color = AmbientTheme.palette.accentHigh.copy(alpha = 0.7f)
-                            )
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                if (content!!.author.isNotBlank()) {
-                                    Text(
-                                        text = content!!.author,
-                                        style = ResponsiveTypography.t3.copy(
-                                            fontWeight = FontWeight.SemiBold
-                                        ),
-                                        color = AmbientTheme.palette.textPrimary.copy(alpha = 0.6f)
-                                    )
+                cleanedHtml != null -> {
+                    AndroidView(
+                        factory = { ctx ->
+                            WebView(ctx).apply {
+                                settings.apply {
+                                    javaScriptEnabled = false 
+                                    domStorageEnabled = false
+                                    loadsImagesAutomatically = true
+                                    defaultFontSize = 16
                                 }
-                                if (content!!.publishedDate.isNotBlank()) {
-                                    if (content!!.author.isNotBlank()) {
-                                        Text(
-                                            text = "·",
-                                            style = ResponsiveTypography.t3,
-                                            color = AmbientTheme.palette.textSecondary.copy(alpha = 0.3f)
-                                        )
-                                    }
-                                    Text(
-                                        text = content!!.publishedDate.take(10),
-                                        style = ResponsiveTypography.t3,
-                                        color = AmbientTheme.palette.textSecondary.copy(alpha = 0.5f)
-                                    )
+                                // Prevent horizontal scrolling/bounce in the webview itself
+                                overScrollMode = android.view.View.OVER_SCROLL_NEVER
+                                webViewClient = WebViewClient()
+                                setBackgroundColor(palette.mainBackground.toArgb())
+                            }
+                        },
+                        update = { webView ->
+                            // Use a tag to prevent reloading the same content during drag-induced recompositions
+                            val currentHtml = webView.tag as? String
+                            if (currentHtml != cleanedHtml) {
+                                cleanedHtml?.let {
+                                    webView.loadDataWithBaseURL(article.url, it, "text/html", "UTF-8", null)
+                                    webView.tag = it
                                 }
                             }
-                        }
-                    }
-
-                    items(content!!.bodyParagraphs) { paragraph ->
-                        Text(
-                            text = paragraph,
-                            style = ResponsiveTypography.t2.copy(
-                                fontSize = 16.sp,
-                                lineHeight = 26.sp
-                            ),
-                            color = AmbientTheme.palette.textPrimary.copy(alpha = 0.92f),
-                            modifier = Modifier.padding(bottom = 24.dp)
-                        )
-                    }
-
-                    item {
-                        Spacer(modifier = Modifier.height(80.dp))
-                    }
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
+        }
+
+        // Dismiss handle / visual indicator at the top
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 12.dp)
+                .size(width = 40.dp, height = 4.dp)
+                .background(palette.textPrimary.copy(alpha = 0.2f), RoundedCornerShape(2.dp))
+        )
+
+        // Top-right TTS button
+        plainText?.takeIf { it.isNotBlank() }?.let { narration ->
+            TtsIconButton(
+                sessionId = "article:${article.url.hashCode()}",
+                title = article.title,
+                textProvider = { narration },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 16.dp, end = 20.dp)
+            )
         }
     }
 }
 
-
-private fun fetchArticleHtml(url: String): String {
-    return runCatching {
-        val request = Request.Builder()
-            .url(url)
-            .header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
-            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-            .header("Accept-Language", "en-US,en;q=0.5")
-            .build()
-
-        com.ambient.launcher.HttpClient.instance.newCall(request).execute().use { response ->
-            if (response.isSuccessful) response.body?.string().orEmpty() else ""
-        }
-    }.getOrNull().orEmpty()
-}

@@ -39,7 +39,7 @@ android {
         buildConfigField(
             "String",
             "GEMINI_MODEL",
-            "\"${localProperties.getProperty("geminiModel", "gemini-2.0-flash").escapeForBuildConfig()}\""
+            "\"${localProperties.getProperty("geminiModel", "gemini-2.5-flash").escapeForBuildConfig()}\""
         )
     }
 
@@ -97,11 +97,23 @@ dependencies {
     // Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 
+    // DataStore
+    implementation("androidx.datastore:datastore-preferences:1.1.2")
+
     // HTML Parsing (Reading Mode)
     implementation("org.jsoup:jsoup:1.16.1")
+    implementation("net.dankito.readability4j:readability4j:1.0.8")
+
+    // Coil for image/icon loading
+    val coilVersion = "3.1.0"
+    implementation("io.coil-kt.coil3:coil-compose:$coilVersion")
+    implementation("io.coil-kt.coil3:coil-network-okhttp:$coilVersion")
 
     // Chrome Custom Tabs (paywalled sites — Google OAuth compatible, shares Chrome cookies)
     implementation("androidx.browser:browser:1.8.0")
+
+    // MediaSessionCompat for TTS lockscreen transport controls
+    implementation("androidx.media:media:1.7.0")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

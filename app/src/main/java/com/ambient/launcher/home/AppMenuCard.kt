@@ -559,34 +559,15 @@ private fun AppMenuSmartHomeRow(
         // First app
         if (apps.isNotEmpty()) {
             val app = apps[0]
-            val iconBitmap  = rememberAppIcon(packageName = app.packageName)
             val bucketColor = app.bucket.themeColor(AmbientTheme.palette)
-            if (iconBitmap != null) {
-                Image(
-                    bitmap             = iconBitmap,
-                    contentDescription = app.label,
-                    colorFilter        = getAmbientIconFilter(bucketColor),
-                    modifier           = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable { onAppClick(app) }
-                )
-            } else {
-                androidx.compose.material3.Surface(
-                    shape    = RoundedCornerShape(12.dp),
-                    color    = AmbientTheme.palette.tileBackground,
-                    border   = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
-                    modifier = Modifier.size(48.dp).clickable { onAppClick(app) }
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text     = app.label.take(1),
-                            style    = MaterialTheme.typography.bodyLarge,
-                            color    = AmbientTheme.palette.textPrimary
-                        )
-                    }
-                }
-            }
+            AppIcon(
+                packageName = app.packageName,
+                colorFilter = getAmbientIconFilter(bucketColor),
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { onAppClick(app) }
+            )
         }
 
         // Center spacing (40% of width)
@@ -595,34 +576,15 @@ private fun AppMenuSmartHomeRow(
         // Second app
         if (apps.size > 1) {
             val app = apps[1]
-            val iconBitmap  = rememberAppIcon(packageName = app.packageName)
             val bucketColor = app.bucket.themeColor(AmbientTheme.palette)
-            if (iconBitmap != null) {
-                Image(
-                    bitmap             = iconBitmap,
-                    contentDescription = app.label,
-                    colorFilter        = getAmbientIconFilter(bucketColor),
-                    modifier           = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable { onAppClick(app) }
-                )
-            } else {
-                androidx.compose.material3.Surface(
-                    shape    = RoundedCornerShape(12.dp),
-                    color    = AmbientTheme.palette.tileBackground,
-                    border   = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
-                    modifier = Modifier.size(48.dp).clickable { onAppClick(app) }
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text     = app.label.take(1),
-                            style    = MaterialTheme.typography.bodyLarge,
-                            color    = AmbientTheme.palette.textPrimary
-                        )
-                    }
-                }
-            }
+            AppIcon(
+                packageName = app.packageName,
+                colorFilter = getAmbientIconFilter(bucketColor),
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { onAppClick(app) }
+            )
         }
 
         // Right margin: 30% from right edge

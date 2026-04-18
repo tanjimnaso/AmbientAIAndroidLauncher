@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ambient.launcher.ui.theme.AmbientTheme
+import com.ambient.launcher.ui.theme.AmbientMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -92,7 +93,7 @@ private fun loadCurrentNote(context: Context): NotePage? =
 
 // ── Export ────────────────────────────────────────────────────────────────────
 
-private fun saveToGallery(context: Context, id: Long, strokes: List<NoteStroke>) {
+private fun saveToGallery(context: Context, id: Long, strokes: List<NoteStroke>, paletteInk: Color) {
     val displayWidth = context.resources.displayMetrics.widthPixels
     val screenHeight = context.resources.displayMetrics.heightPixels.toFloat()
     var maxY = screenHeight
@@ -101,8 +102,17 @@ private fun saveToGallery(context: Context, id: Long, strokes: List<NoteStroke>)
 
     val bitmap = Bitmap.createBitmap(displayWidth, height, Bitmap.Config.ARGB_8888)
     val canvas = AndroidCanvas(bitmap)
-    val paint  = Paint().apply { color = android.graphics.Color.WHITE; strokeCap = Paint.Cap.ROUND; isAntiAlias = true }
-    canvas.drawColor(android.graphics.Color.parseColor("#121212"))
+    canvas.drawColor(android.graphics.Color.TRANSPARENT)
+
+    // For gallery export, we might still want a background, but for consistency we'll use white-ish ink on dark
+    // or dark ink on light based on the palette's intent.
+    // However, the requested inkColor is now in the palette.
+    val ink = android.graphics.Color.rgb(
+        (paletteInk.red * 255).toInt(),
+        (paletteInk.green * 255).toInt(),
+        (paletteInk.blue * 255).toInt()
+    )
+    val paint = Paint().apply { color = ink; strokeCap = Paint.Cap.ROUND; isAntiAlias = true }
     strokes.forEach { stroke ->
         for (i in 0 until stroke.points.size - 1) {
             val a = stroke.points[i]; val b = stroke.points[i + 1]
@@ -147,10 +157,11 @@ internal fun SPenNotesScreen(modifier: Modifier = Modifier) {
     val density = LocalDensity.current
     val prefs   = remember { context.getSharedPreferences("spen_prefs", Context.MODE_PRIVATE) }
 
-    var isRightHanded by remember { mutableStateOf(prefs.getBoolean("right_handed", true)) }
-    var currentNote   by remember { mutableStateOf<NotePage?>(null) }
-    var isLoaded      by remember { mutableStateOf(false) }
-    var activeStroke  by remember { mutableStateOf<List<NotePoint>>(emptyList()) }
+    var isRightHanded  by remember { mutableStateOf(prefs.getBoolean("right_handed", true)) }
+    var isEraserMode   by remember { mutableStateOf(false) }
+    var currentNote    by remember { mutableStateOf<NotePage?>(null) }
+    var isLoaded       by remember { mutableStateOf(false) }
+    var activeStroke   by remember { mutableStateOf<List<NotePoint>>(emptyList()) }
 
     LaunchedEffect(Unit) {
         val note = withContext(Dispatchers.IO) {
@@ -174,6 +185,22 @@ internal fun SPenNotesScreen(modifier: Modifier = Modifier) {
     }
 
     val hasStrokes = note.strokes.isNotEmpty()
+
+    val palette       = AmbientTheme.palette
+    val mode          = AmbientTheme.mode
+    val isOutdoor     = mode == AmbientMode.DAYLIGHT_OUTDOOR
+
+    val inkColor      = palette.inkColor
+    val textPrimary   = palette.textPrimary
+    val textSecondary = palette.textSecondary
+    val accentHigh    = palette.accentHigh
+
+    // Dynamic contrast: Toolbar is "closer" to the user than the canvas.
+    // Outdoor mode stays "flat" (0% overlay effect) for maximum clarity.
+    val toolbarAlpha   = if (isOutdoor) 1f else 0.95f
+    val secondaryAlpha = if (isOutdoor) 1f else 0.82f
+    val disabledAlpha  = if (isOutdoor) 0.5f else 0.38f
+    val actionBgAlpha  = if (isOutdoor) 0f else 0.16f
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val screenHeightPx = with(density) { maxHeight.toPx() }
@@ -229,8 +256,9 @@ internal fun SPenNotesScreen(modifier: Modifier = Modifier) {
 
                                 down.consume()
 
-                                // Eraser when: physical eraser tip OR S Pen side button held
-                                val isErasing = down.type == PointerType.Eraser ||
+                                // Eraser when: toolbar toggle, physical eraser tip, OR S Pen side button held
+                                val isErasing = isEraserMode ||
+                                    down.type == PointerType.Eraser ||
                                     event.buttons.isSecondaryPressed
 
                                 val beforeGesture  = note.strokes.toList()
@@ -285,17 +313,18 @@ internal fun SPenNotesScreen(modifier: Modifier = Modifier) {
                                 }
 
                                 if (gestureChanged) {
-                                    undoStack.addLast(beforeGesture)
+                                    val before = beforeGesture
+                                    val current = note.strokes.toList()
+                                    undoStack.addLast(before)
                                     redoStack.clear()
-                                    val snapshot = note.strokes.toList()
-                                    scope.launch(Dispatchers.IO) { saveNote(context, note.id, snapshot) }
+                                    scope.launch(Dispatchers.IO) { saveNote(context, note.id, current) }
                                 }
                             }
                         }
                     }
             ) {
-                note.strokes.forEach { drawPressureStroke(it.points, Color.White.copy(alpha = 0.88f)) }
-                if (activeStroke.size > 1) drawPressureStroke(activeStroke, Color.White)
+                note.strokes.forEach { drawPressureStroke(it.points, inkColor.copy(alpha = 0.88f)) }
+                if (activeStroke.size > 1) drawPressureStroke(activeStroke, inkColor)
             }
         }
 
@@ -313,21 +342,28 @@ internal fun SPenNotesScreen(modifier: Modifier = Modifier) {
                 verticalAlignment    = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                Text(
-                    text     = if (isRightHanded) "Right Handed" else "Left Handed",
-                    style    = ResponsiveTypography.t2.copy(fontWeight = FontWeight.Medium, fontSize = 13.sp),
-                    color    = AmbientTheme.palette.textSecondary.copy(alpha = 0.6f),
-                    modifier = Modifier.clickable {
-                        isRightHanded = !isRightHanded
-                        prefs.edit().putBoolean("right_handed", isRightHanded).apply()
-                    }
-                )
+                    Text(
+                        text     = if (isRightHanded) "Right Handed" else "Left Handed",
+                        style    = ResponsiveTypography.t2.copy(fontWeight = FontWeight.Medium, fontSize = 13.sp),
+                        color    = textSecondary.copy(alpha = secondaryAlpha),
+                        modifier = Modifier.clickable {
+                            isRightHanded = !isRightHanded
+                            prefs.edit().putBoolean("right_handed", isRightHanded).apply()
+                        }
+                    )
+
+                    Text(
+                        text     = if (isEraserMode) "Eraser" else "Pen",
+                        style    = ResponsiveTypography.t2.copy(fontWeight = FontWeight.Medium, fontSize = 13.sp),
+                        color    = if (isEraserMode) accentHigh else textSecondary.copy(alpha = secondaryAlpha),
+                        modifier = Modifier.clickable { isEraserMode = !isEraserMode }
+                    )
 
                 if (hasStrokes || undoStack.isNotEmpty()) {
                     Text(
                         text     = "Clear",
                         style    = ResponsiveTypography.t2.copy(fontWeight = FontWeight.Normal, fontSize = 13.sp),
-                        color    = AmbientTheme.palette.textSecondary.copy(alpha = 0.5f),
+                        color    = textSecondary.copy(alpha = secondaryAlpha * 0.9f),
                         modifier = Modifier.clickable {
                             if (note.strokes.isNotEmpty()) {
                                 undoStack.addLast(note.strokes.toList())
@@ -342,9 +378,9 @@ internal fun SPenNotesScreen(modifier: Modifier = Modifier) {
                         imageVector        = Icons.AutoMirrored.Filled.Undo,
                         contentDescription = "Undo",
                         tint               = if (undoStack.isNotEmpty())
-                            AmbientTheme.palette.textSecondary.copy(alpha = 0.55f)
+                            textSecondary.copy(alpha = toolbarAlpha)
                         else
-                            AmbientTheme.palette.textSecondary.copy(alpha = 0.2f),
+                            textSecondary.copy(alpha = disabledAlpha),
                         modifier = Modifier
                             .size(20.dp)
                             .clickable(enabled = undoStack.isNotEmpty()) {
@@ -361,9 +397,9 @@ internal fun SPenNotesScreen(modifier: Modifier = Modifier) {
                         imageVector        = Icons.AutoMirrored.Filled.Redo,
                         contentDescription = "Redo",
                         tint               = if (redoStack.isNotEmpty())
-                            AmbientTheme.palette.textSecondary.copy(alpha = 0.55f)
+                            textSecondary.copy(alpha = toolbarAlpha)
                         else
-                            AmbientTheme.palette.textSecondary.copy(alpha = 0.2f),
+                            textSecondary.copy(alpha = disabledAlpha),
                         modifier = Modifier
                             .size(20.dp)
                             .clickable(enabled = redoStack.isNotEmpty()) {
@@ -386,7 +422,7 @@ internal fun SPenNotesScreen(modifier: Modifier = Modifier) {
                         val snapshot = note.strokes.toList()
                         val oldId    = note.id
                         scope.launch(Dispatchers.IO) {
-                            runCatching { saveToGallery(context, oldId, snapshot) }
+                            runCatching { saveToGallery(context, oldId, snapshot, inkColor) }
                             File(notesDir(context), "note_$oldId.json").delete()
                         }
                         val newNote = NotePage(System.currentTimeMillis())
@@ -397,7 +433,7 @@ internal fun SPenNotesScreen(modifier: Modifier = Modifier) {
                         scope.launch(Dispatchers.IO) { saveNote(context, newNote.id, emptyList()) }
                     }
                     .background(
-                        AmbientTheme.palette.textPrimary.copy(alpha = 0.1f),
+                        textPrimary.copy(alpha = actionBgAlpha),
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
                     )
                     .padding(horizontal = 16.dp, vertical = 12.dp)
@@ -405,7 +441,7 @@ internal fun SPenNotesScreen(modifier: Modifier = Modifier) {
                 Text(
                     text  = "+ New Note",
                     style = ResponsiveTypography.t3.copy(fontWeight = FontWeight.SemiBold),
-                    color = AmbientTheme.palette.accentHigh.copy(alpha = 0.85f)
+                    color = accentHigh.copy(alpha = toolbarAlpha)
                 )
             }
         }

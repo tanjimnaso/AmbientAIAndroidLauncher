@@ -68,6 +68,11 @@ internal class BriefingViewModel(application: Application) : AndroidViewModel(ap
     private val appContext = application.applicationContext
 
     private val client = HttpClient.instance
+    
+    private val geminiClient = HttpClient.instance.newBuilder()
+        .callTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(90, java.util.concurrent.TimeUnit.SECONDS)
+        .build()
 
     init {
         // Register notification channel once at startup (idempotent)
@@ -84,6 +89,9 @@ internal class BriefingViewModel(application: Application) : AndroidViewModel(ap
 
     private val _briefing = MutableStateFlow<String?>(null)
     val briefing: StateFlow<String?> = _briefing.asStateFlow()
+
+    private val _briefingHasError = MutableStateFlow(false)
+    val briefingHasError: StateFlow<Boolean> = _briefingHasError.asStateFlow()
 
     // null = idle/not yet requested; non-null = ready
     private val _analysis = MutableStateFlow<String?>(null)
@@ -107,17 +115,19 @@ internal class BriefingViewModel(application: Application) : AndroidViewModel(ap
 
     private var lastHeadlinesHash: Int = 0
 
-    fun generateBriefing(headlines: List<String>, location: String = "Padstow, Sydney, NSW") {
+    fun generateBriefing(headlines: List<String>, location: String = "Padstow, Sydney, NSW", force: Boolean = false) {
         if (headlines.isEmpty()) return
 
         val headlinesHash = headlines.hashCode()
         val cachedAt = prefs.getLong(KEY_TIMESTAMP, 0L)
         val isExpired = cachedAt < lastSlotTime()
 
-        // Persistent slot cache hit — covers cold starts within the same 7am/7pm window
-        if (!isExpired && _briefing.value != null) return
-        // In-session dedup — same headlines already triggered a call this session
-        if (headlinesHash == lastHeadlinesHash && _briefing.value != null) return
+        if (!force) {
+            // Persistent slot cache hit — covers cold starts within the same 7am/7pm window
+            if (!isExpired && _briefing.value != null && !_briefingHasError.value) return
+            // In-session dedup — same headlines already triggered a call this session
+            if (headlinesHash == lastHeadlinesHash && _briefing.value != null && !_briefingHasError.value) return
+        }
 
         lastHeadlinesHash = headlinesHash
         // Clear stale analysis whenever briefing input changes
@@ -130,6 +140,7 @@ internal class BriefingViewModel(application: Application) : AndroidViewModel(ap
         }
 
         _isBriefingLoading.value = true
+        _briefingHasError.value = false
 
         viewModelScope.launch(Dispatchers.IO) {
             val systemInstruction = """
@@ -175,17 +186,20 @@ internal class BriefingViewModel(application: Application) : AndroidViewModel(ap
                 val clean = summary?.stripMarkdown()
                 if (!clean.isNullOrBlank()) {
                     _briefing.value = clean
+                    _briefingHasError.value = false
                     prefs.edit()
                         .putString(KEY_BRIEFING, clean)
                         .putLong(KEY_TIMESTAMP, System.currentTimeMillis())
                         .apply()
                 } else {
                     _briefing.value = null // empty response → "No data" in UI
+                    _briefingHasError.value = true
                 }
             }
 
             result.onFailure { e ->
                 Log.e(TAG, "Gemini call failed: ${e.message}")
+                _briefingHasError.value = true
                 // Keep existing briefing if present; otherwise show "No data"
                 if (_briefing.value.isNullOrBlank()) _briefing.value = null
             }
@@ -338,14 +352,25 @@ internal class BriefingViewModel(application: Application) : AndroidViewModel(ap
         NotificationManagerCompat.from(ctx).notify(NOTIF_ID, notification)
     }
 
+    private fun fetchBriefingResponse(prompt: String): String? {
+        return fetchGemini(prompt, isPro = false)
+    }
+
     private fun fetchAnalysisResponse(prompt: String): String? {
+        return fetchGemini(prompt, isPro = true)
+    }
+
+    private fun fetchGemini(prompt: String, isPro: Boolean): String? {
+        val model = if (isPro) ANALYSIS_MODEL else BuildConfig.GEMINI_MODEL
+        val activeClient = if (isPro) geminiClient else client
+
         val requestBody = JSONObject().apply {
             put("contents", JSONArray().put(JSONObject().apply {
                 put("parts", JSONArray().put(JSONObject().put("text", prompt)))
             }))
         }.toString()
 
-        val url = "https://generativelanguage.googleapis.com/v1beta/models/$ANALYSIS_MODEL:generateContent"
+        val url = "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent"
 
         val request = Request.Builder()
             .url(url)
@@ -354,15 +379,10 @@ internal class BriefingViewModel(application: Application) : AndroidViewModel(ap
             .post(requestBody.toRequestBody("application/json".toMediaType()))
             .build()
 
-        // Pro model needs more time — override both call and read timeouts (inherited read=15s would fire first)
-        client.newBuilder()
-            .callTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(90, java.util.concurrent.TimeUnit.SECONDS)
-            .build()
-            .newCall(request).execute().use { response ->
+        activeClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 val errorBody = response.body?.string().orEmpty().take(200)
-                Log.e(TAG, "Analysis HTTP ${response.code}: $errorBody")
+                Log.e(TAG, "Gemini ($model) HTTP ${response.code}: $errorBody")
                 return null
             }
             val body = response.body?.string() ?: return null
@@ -398,36 +418,4 @@ internal class BriefingViewModel(application: Application) : AndroidViewModel(ap
     }
 
     private fun generateLocalBriefing(@Suppress("UNUSED_PARAMETER") headlines: List<String>): String = ""
-
-    private fun fetchBriefingResponse(prompt: String): String? {
-        val requestBody = JSONObject().apply {
-            put("contents", JSONArray().put(JSONObject().apply {
-                put("parts", JSONArray().put(JSONObject().put("text", prompt)))
-            }))
-        }.toString()
-
-        val url = "https://generativelanguage.googleapis.com/v1beta/models/${BuildConfig.GEMINI_MODEL}:generateContent"
-
-        val request = Request.Builder()
-            .url(url)
-            .header("x-goog-api-key", BuildConfig.GEMINI_API_KEY)
-            .header("Content-Type", "application/json")
-            .post(requestBody.toRequestBody("application/json".toMediaType()))
-            .build()
-
-        client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                val errorBody = response.body?.string().orEmpty().take(200)
-                Log.e(TAG, "Briefing HTTP ${response.code}: $errorBody")
-                return null
-            }
-            val body = response.body?.string() ?: return null
-            val root = JSONObject(body)
-            val parts = root.optJSONArray("candidates")
-                ?.optJSONObject(0)
-                ?.optJSONObject("content")
-                ?.optJSONArray("parts") ?: return null
-            return parts.optJSONObject(0)?.optString("text")?.trim()
-        }
-    }
 }

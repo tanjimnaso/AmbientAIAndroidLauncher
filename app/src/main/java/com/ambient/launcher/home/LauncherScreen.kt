@@ -16,6 +16,7 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +28,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,6 +36,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ambient.launcher.*
 import com.ambient.launcher.ui.theme.AmbientTheme
+import com.ambient.launcher.ui.theme.AmbientMode
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -44,6 +47,32 @@ private val BLOCKED_QUICK_APP_PACKAGES = setOf(
     "com.android.chrome",
     "com.google.android.apps.chrome"
 )
+
+/**
+ * UI State for the Launcher screen to manage navigation and overlays.
+ */
+@Stable
+internal class LauncherUiState {
+    var editingApp by mutableStateOf<AppInfo?>(null)
+    var showAppMenu by mutableStateOf(false)
+    var viewingArticle by mutableStateOf<RssFeedItem?>(null)
+    var viewingAnalysis by mutableStateOf(false)
+
+    fun isOverlayVisible() = viewingAnalysis || viewingArticle != null || editingApp != null || showAppMenu
+
+    fun handleBack(): Boolean {
+        return when {
+            viewingAnalysis -> { viewingAnalysis = false; true }
+            viewingArticle != null -> { viewingArticle = null; true }
+            editingApp != null -> { editingApp = null; true }
+            showAppMenu -> { showAppMenu = false; true }
+            else -> false
+        }
+    }
+}
+
+@Composable
+internal fun rememberLauncherUiState() = remember { LauncherUiState() }
 
 /**
  * LauncherScreen — root composable.
@@ -58,8 +87,7 @@ private val BLOCKED_QUICK_APP_PACKAGES = setOf(
 @Composable
 internal fun LauncherScreen(
     dashboardViewModel: DashboardViewModel,
-    briefingViewModel: BriefingViewModel,
-    todoViewModel: TodoViewModel
+    briefingViewModel: BriefingViewModel
 ) {
     val context       = LocalContext.current
     val ambientPalette = AmbientTheme.palette
@@ -74,15 +102,12 @@ internal fun LauncherScreen(
     val analysis           by briefingViewModel.analysis.collectAsStateWithLifecycle()
     val isAnalysisLoading  by briefingViewModel.isAnalysisLoading.collectAsStateWithLifecycle()
     val isBriefingLoading  by briefingViewModel.isBriefingLoading.collectAsStateWithLifecycle()
+    val briefingHasError   by briefingViewModel.briefingHasError.collectAsStateWithLifecycle()
     val analysisHasError   by briefingViewModel.analysisHasError.collectAsStateWithLifecycle()
     val installedApps      by dashboardViewModel.installedApps.collectAsStateWithLifecycle()
 
     // ── UI state ──────────────────────────────────────────────────────────────
-    var editingApp      by remember { mutableStateOf<AppInfo?>(null) }
-    var editingToday    by remember { mutableStateOf(false) }
-    var showAppMenu     by remember { mutableStateOf(false) }
-    var viewingArticle  by remember { mutableStateOf<RssFeedItem?>(null) }
-    var viewingAnalysis by remember { mutableStateOf(false) }
+    val uiState = rememberLauncherUiState()
 
     val isAnalysisReady = analysis != null && !isAnalysisLoading && !analysisHasError
 
@@ -109,28 +134,23 @@ internal fun LauncherScreen(
         }
     }
     LaunchedEffect(Unit) {
-        var permissionRequested = false
-        while (isActive) {
-            val hasLocation = ContextCompat.checkSelfPermission(
-                context, Manifest.permission.ACCESS_COARSE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-            if (hasLocation) {
+        val hasLocation = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (hasLocation) {
+            while (isActive) {
                 dashboardViewModel.refreshWeather()
                 delay(30 * 60 * 1000L)
-            } else {
-                if (!permissionRequested) {
-                    permissionRequested = true
-                    requestLocationPermission.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
-                }
-                delay(5_000L)
             }
+        } else {
+            requestLocationPermission.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
         }
     }
 
     // ── App data derived state ────────────────────────────────────────────────
     val appsByPackage = remember(installedApps) { installedApps.associateBy { it.packageName } }
 
-    val bucketApps = remember(configuration, appsByPackage) {
+    val bucketApps = remember(configuration.assignments, appsByPackage) {
         LauncherBucket.entries.associateWith { bucket ->
             configuration.packagesFor(bucket).mapNotNull { pkg ->
                 appsByPackage[pkg]?.copy(bucket = bucket)
@@ -169,13 +189,8 @@ internal fun LauncherScreen(
     }
 
     // ── Back stack ────────────────────────────────────────────────────────────
-    BackHandler {
-        when {
-            viewingAnalysis       -> viewingAnalysis = false
-            viewingArticle != null -> viewingArticle = null
-            editingApp != null     -> editingApp = null
-            showAppMenu            -> showAppMenu = false
-        }
+    BackHandler(enabled = uiState.isOverlayVisible()) {
+        uiState.handleBack()
     }
 
     // ── Masthead height tracking (measured once rendered, used for page top-padding) ──
@@ -213,6 +228,7 @@ internal fun LauncherScreen(
                     topPadding           = mastheadHeightDp,
                     briefing             = briefing,
                     isBriefingLoading    = isBriefingLoading,
+                    briefingHasError     = briefingHasError,
                     isAnalysisLoading    = isAnalysisLoading,
                     isAnalysisReady      = isAnalysisReady,
                     analysisHasError     = analysisHasError,
@@ -220,9 +236,6 @@ internal fun LauncherScreen(
                     isRefreshing         = isFeedRefreshing,
                     lastFeedRefreshTime  = lastFeedRefreshTime,
                     onRefresh            = {
-                        // Pull-to-refresh only refreshes the feed — briefing stays on its
-                        // morning cache (BRIEFING_SLOT_HOURS = [7]). clearBriefingCache()
-                        // is intentionally NOT called here.
                         dashboardViewModel.refreshFeeds()
                     },
                     onOpenCloudNotifications = {
@@ -233,15 +246,22 @@ internal fun LauncherScreen(
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         try { context.startActivity(intent) } catch (_: Exception) {}
                     },
-                    onFeedClick          = { viewingArticle = it },
+                    onFeedClick          = { uiState.viewingArticle = it },
                     onBriefingClick      = {
-                        viewingAnalysis = true
-                        val current = briefing
-                        if (!current.isNullOrBlank() && !isAnalysisLoading && analysis == null) {
-                            if (briefingViewModel.isAnalysisCached(current))
-                                briefingViewModel.loadCachedAnalysis(current)
-                            else
-                                briefingViewModel.generateAnalysis(current)
+                        if (briefingHasError) {
+                            briefingViewModel.generateBriefing(
+                                headlines = feedItems.take(30).map { "${it.source}: ${it.title}" },
+                                force = true
+                            )
+                        } else {
+                            uiState.viewingAnalysis = true
+                            val current = briefing
+                            if (!current.isNullOrBlank() && !isAnalysisLoading && analysis == null) {
+                                if (briefingViewModel.isAnalysisCached(current))
+                                    briefingViewModel.loadCachedAnalysis(current)
+                                else
+                                    briefingViewModel.generateAnalysis(current)
+                            }
                         }
                     }
                 )
@@ -257,7 +277,7 @@ internal fun LauncherScreen(
                             context.startActivity(it)
                         }
                     },
-                    onSwipeUp     = { showAppMenu = true }
+                    onSwipeUp     = { uiState.showAppMenu = true }
                 )
 
                 // ── Page 2: S Pen notes ───────────────────────────────────────
@@ -285,52 +305,52 @@ internal fun LauncherScreen(
         // ── Overlays (sit above the pager) ────────────────────────────────────
 
         AnimatedVisibility(
-            visible = viewingAnalysis,
+            visible = uiState.viewingAnalysis,
             enter   = fadeIn(animationSpec = tween(240)),
             exit    = fadeOut(animationSpec = tween(180))
         ) {
             AnalysisScreen(
                 briefingText = briefing ?: "",
                 viewModel    = briefingViewModel,
-                onDismiss    = { viewingAnalysis = false }
+                onDismiss    = { uiState.viewingAnalysis = false }
             )
         }
 
         AnimatedVisibility(
-            visible = viewingArticle != null,
+            visible = uiState.viewingArticle != null,
             enter   = fadeIn(animationSpec = tween(240)),
             exit    = fadeOut(animationSpec = tween(180))
         ) {
-            val article = viewingArticle
+            val article = uiState.viewingArticle
             if (article != null) {
-                ArticleViewerScreen(article = article, onDismiss = { viewingArticle = null })
+                ArticleViewerScreen(article = article, onDismiss = { uiState.viewingArticle = null })
             }
         }
 
         AppMenuCard(
-            isOpen          = showAppMenu,
+            isOpen          = uiState.showAppMenu,
             visibleBuckets  = visibleBuckets,
             bucketApps      = bucketApps,
             configuration   = configuration,
             newApps         = newApps,
             allApps         = allApps,
-            onDismiss       = { showAppMenu = false },
+            onDismiss       = { uiState.showAppMenu = false },
             onToggleCollapse = { bucket -> updateConfiguration(configuration.toggleCollapse(bucket)) },
             onAppClick      = { app ->
                 context.packageManager.getLaunchIntentForPackage(app.packageName)?.let {
                     it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     context.startActivity(it)
                 }
-                showAppMenu = false
+                uiState.showAppMenu = false
             },
-            onAppLongClick  = { editingApp = it }
+            onAppLongClick  = { uiState.editingApp = it }
         )
 
-        if (editingApp != null) {
+        if (uiState.editingApp != null) {
             AppEditDialog(
-                app           = editingApp!!,
+                app           = uiState.editingApp!!,
                 configuration = configuration,
-                onDismiss     = { editingApp = null },
+                onDismiss     = { uiState.editingApp = null },
                 onSave        = { updateConfiguration(it) }
             )
         }
@@ -344,6 +364,7 @@ private fun LeftNewsPage(
     topPadding: Dp,
     briefing: String?,
     isBriefingLoading: Boolean,
+    briefingHasError: Boolean,
     isAnalysisLoading: Boolean,
     isAnalysisReady: Boolean,
     analysisHasError: Boolean,
@@ -383,6 +404,7 @@ private fun LeftNewsPage(
         AiBriefingSection(
             briefing              = briefing,
             isBriefingLoading     = isBriefingLoading,
+            briefingHasError      = briefingHasError,
             isAnalysisLoading     = isAnalysisLoading,
             isAnalysisReady       = isAnalysisReady,
             analysisHasError      = analysisHasError,
@@ -419,3 +441,5 @@ private fun WallpaperBackplane() {
             .background(ambientPalette.mainBackground)
     )
 }
+
+

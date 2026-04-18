@@ -16,7 +16,9 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
-import androidx.core.graphics.drawable.toBitmap
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 
@@ -27,39 +29,31 @@ internal data class AppInfo(
     val firstInstallTime: Long = 0L
 )
 
-private val iconCache = LruCache<String, ImageBitmap>(150)
-
 @Composable
-fun rememberAppIcon(packageName: String): ImageBitmap? {
+fun AppIcon(
+    packageName: String,
+    modifier: Modifier = Modifier,
+    colorFilter: ColorFilter? = null
+) {
     val context = LocalContext.current
-    return produceState<ImageBitmap?>(initialValue = iconCache.get(packageName), packageName) {
-        if (value == null) {
-            value = withContext(Dispatchers.IO) {
-                try {
-                    val pm = context.packageManager
-                    val drawable = pm.getApplicationIcon(packageName)
-                    val bitmap = drawable.toBitmap().asImageBitmap()
-                    iconCache.put(packageName, bitmap)
-                    bitmap
-                } catch (e: Exception) {
-                    null
-                }
-            }
-        }
-    }.value
+    AsyncImage(
+        model = ImageRequest.Builder(context)
+            .data("android.resource://$packageName") // Coil handles package icons via this scheme
+            .build(),
+        contentDescription = null,
+        modifier = modifier,
+        colorFilter = colorFilter
+    )
 }
 
 /** Icon filter: tint opacity varies by light mode for visibility. */
 @Composable
 internal fun getAmbientIconFilter(bucketColor: Color): ColorFilter {
-    val mode = com.ambient.launcher.ui.theme.AmbientTheme.mode
-    val opacity = when (mode) {
-        com.ambient.launcher.ui.theme.AmbientMode.DAYLIGHT_LIGHT -> 0.20f  // Light mode: subtle tint
-        com.ambient.launcher.ui.theme.AmbientMode.INDOOR_LIGHT -> 0.20f
-        com.ambient.launcher.ui.theme.AmbientMode.DAYLIGHT_READING -> 0.40f // Reading: balanced
-        com.ambient.launcher.ui.theme.AmbientMode.INDOOR_READING -> 0.40f
-        com.ambient.launcher.ui.theme.AmbientMode.LOWGLARE -> 0.55f          // Dark: strong cohesion
-    }
+    val opacity = com.ambient.launcher.ui.theme.AmbientTheme.palette.iconOverlayOpacity
+    return getAmbientIconFilterNonComposable(bucketColor, opacity)
+}
+
+internal fun getAmbientIconFilterNonComposable(bucketColor: Color, opacity: Float): ColorFilter {
     return ColorFilter.tint(bucketColor.copy(alpha = opacity), BlendMode.SrcAtop)
 }
 

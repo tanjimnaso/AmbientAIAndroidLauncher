@@ -30,10 +30,6 @@
   Header, project-card row, calendar rail, app tile grid, action cards (Wallet, Battery),
   and note input. Tiles are architected as **status-indicators** (badge-aware) rather than mere static icons.
 
-- **`home/AppDrawer.kt`**
-  Full-screen library/editor overlay. Long-press on a home tile opens the edit dialog, which
-  includes bucket assignment, home visibility toggle, and tile size picker (SMALL / REGULAR / WIDE).
-
 - **`home/LauncherConfig.kt`**
   Bucket model, assignment persistence, home visibility, tile size per package, and default
   seeding heuristics. Persists a `Map<String, TileSize>` alongside existing assignment maps.
@@ -71,9 +67,6 @@
   - Battery: `BroadcastReceiver` on `ACTION_BATTERY_CHANGED`, models discharge as linear from unplug point.
   - App list: `LauncherApps`, sorted by `UsageStatsManager` (7-day window) if permission granted.
 - **`BriefingViewModel`**
-  - **Ambient Signal** (Flash, fast): Consumes `feedItems`, calls `BuildConfig.GEMINI_MODEL` (Flash), generates a single editorial sentence. 4-hour TTL cache, hash-based dedup skips redundant calls.
-  - **Deep Analysis** (Pro, on demand): Separate `generateAnalysis(briefingText)` method targeting `gemini-2.0-pro-exp`. Returns a structured 5-part response (Systemic Explanation, Historical Parallel, Literature/Philosophy, Tech & Economic Analysis, Probabilistic Forecasts). 24-hour cache keyed by briefing text hash.
-  - Both share the same OkHttp client and response-parsing path.
 - **`AgenticAIViewModel`**
   - Gemini-backed assistant wired to the briefing tap action.
   - On tap, builds a structured 5-part analysis prompt and sends it directly to the Gemini app via `ACTION_SEND`. Falls back to launching Gemini, then browser search.
@@ -138,7 +131,7 @@ tap Signal
 
 **Model selection:**
 - Ambient Signal: `BuildConfig.GEMINI_MODEL` (Flash — speed matters)  
-- Deep Analysis: `gemini-2.0-pro-exp` (hardcoded constant — quality matters)
+- Deep Analysis: `gemini-2.5-pro` (hardcoded constant — quality matters)
 
 ---
 
@@ -190,5 +183,4 @@ User overrides are persisted in `LauncherConfig.tileSizes: Map<String, TileSize>
 - `DataStore` migration from `SharedPreferences` for launcher config.
 - Real widget hosting for selected sections.
 - Dedicated repositories for feed, notes, and AI.
-- Media now-playing strip.
 - Static location map.
