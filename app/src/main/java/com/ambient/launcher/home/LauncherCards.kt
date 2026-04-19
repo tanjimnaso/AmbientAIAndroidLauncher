@@ -38,6 +38,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import com.ambient.launcher.BatteryUiState
 import com.ambient.launcher.RssFeedItem
 import com.ambient.launcher.ui.theme.AmbientTheme
@@ -284,6 +287,8 @@ internal fun HeadlinesSection(
     isRefreshing: Boolean,
     lastRefreshTime: Long = 0L,
     onFeedClick: (RssFeedItem) -> Unit,
+    onToggleStar: (RssFeedItem) -> Unit,
+    onDelete: (RssFeedItem) -> Unit,
     modifier: Modifier = Modifier,
     onRefresh: (() -> Unit)? = null
 ) {
@@ -311,11 +316,11 @@ internal fun HeadlinesSection(
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 items(feedItems, key = { it.url }) { item ->
-                    HeadlineItem(
-                        source = item.source,
-                        title = item.title,
-                        publishedAtEpochMillis = item.publishedAtEpochMillis,
-                        onClick = { onFeedClick(item) }
+                    SwipeableHeadlineItem(
+                        item = item,
+                        onFeedClick = onFeedClick,
+                        onToggleStar = onToggleStar,
+                        onDelete = onDelete
                     )
                 }
                 item { Spacer(Modifier.height(8.dp)) }
@@ -323,6 +328,82 @@ internal fun HeadlinesSection(
             TimestampFooter(lastRefreshTime)
         }
     }
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun SwipeableHeadlineItem(
+    item: RssFeedItem,
+    onFeedClick: (RssFeedItem) -> Unit,
+    onToggleStar: (RssFeedItem) -> Unit,
+    onDelete: (RssFeedItem) -> Unit
+) {
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    val swipeState = androidx.compose.material3.rememberSwipeToDismissBoxState(
+        confirmValueChange = {
+            if (it == androidx.compose.material3.SwipeToDismissBoxValue.EndToStart) {
+                showDeleteConfirm = true
+                false
+            } else false
+        }
+    )
+
+    if (showDeleteConfirm) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Delete item?", style = ResponsiveTypography.t1) },
+            text = { Text("Remove this intelligence signal from your feed?", style = ResponsiveTypography.t2) },
+            confirmButton = {
+                Text(
+                    "DELETE",
+                    style = ResponsiveTypography.t3.copy(fontWeight = FontWeight.Bold),
+                    color = AmbientTheme.palette.errorAccent,
+                    modifier = Modifier.clickable { 
+                        onDelete(item)
+                        showDeleteConfirm = false
+                    }
+                )
+            },
+            dismissButton = {
+                Text(
+                    "CANCEL",
+                    style = ResponsiveTypography.t3,
+                    modifier = Modifier.clickable { showDeleteConfirm = false }
+                )
+            },
+            containerColor = AmbientTheme.palette.panel,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+    androidx.compose.material3.SwipeToDismissBox(
+        state = swipeState,
+        backgroundContent = {
+            val alignment = Alignment.CenterEnd
+            val color = AmbientTheme.palette.errorAccent.copy(alpha = 0.2f)
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(color)
+                    .padding(horizontal = 28.dp),
+                contentAlignment = alignment
+            ) {
+                Text("DELETE", color = AmbientTheme.palette.errorAccent, style = ResponsiveTypography.t3)
+            }
+        },
+        enableDismissFromStartToEnd = false,
+        content = {
+            HeadlineItem(
+                source = item.source,
+                title = item.title,
+                publishedAtEpochMillis = item.publishedAtEpochMillis,
+                isStarred = item.isStarred,
+                onToggleStar = { onToggleStar(item) },
+                onClick = { onFeedClick(item) },
+                modifier = Modifier.background(AmbientTheme.palette.mainBackground)
+            )
+        }
+    )
 }
 
 @Composable
@@ -345,85 +426,135 @@ private fun HeadlineItem(
     source: String,
     title: String,
     publishedAtEpochMillis: Long = 0L,
+    isStarred: Boolean = false,
+    onToggleStar: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null
 ) {
-    val sourceColorNonComposable = remember(source) { getSourceColorNonComposable(source) }
-    val sourceColor = if (sourceColorNonComposable == Color.Unspecified) {
-        AmbientTheme.palette.textSecondary
-    } else {
-        sourceColorNonComposable
-    }
+    val sourceColor = getSourceColor(source)
     val elapsed = remember(publishedAtEpochMillis) { 
         if (publishedAtEpochMillis > 0L) formatElapsed(publishedAtEpochMillis) else "" 
     }
     
-    Column(
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(start = 28.dp, end = 100.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+            .padding(start = 28.dp, end = 28.dp)
     ) {
-        // Kicker row: source (left) + timestamp (right)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(end = 40.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            if (source.isNotBlank()) {
-                Text(
-                    text = source.uppercase(),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.2.sp,
-                    color = sourceColor.copy(alpha = 0.85f),
-                    modifier = Modifier.weight(1f)
-                )
+            // Kicker row: source (left) + timestamp (right)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                if (source.isNotBlank()) {
+                    Text(
+                        text = source.uppercase(),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.6.sp,
+                        color = sourceColor.copy(alpha = 0.85f),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                if (publishedAtEpochMillis > 0L) {
+                    Text(
+                        text = elapsed,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AmbientTheme.palette.textPrimary.copy(alpha = 0.5f),
+                        modifier = Modifier.padding(start = 8.dp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Visible
+                    )
+                }
             }
-            if (publishedAtEpochMillis > 0L) {
-                Text(
-                    text = elapsed,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = AmbientTheme.palette.textPrimary.copy(alpha = 0.4f),
-                    modifier = Modifier.padding(start = 8.dp),
-                    maxLines = 1,
-                    overflow = TextOverflow.Visible
+
+            // Title — flush left, ragged right
+            Text(
+                text = title,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Normal,
+                lineHeight = 22.sp,
+                color = AmbientTheme.palette.textPrimary,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        // Star button on the far right
+        if (onToggleStar != null) {
+            val starColor = if (isStarred) AmbientTheme.palette.accentHigh else AmbientTheme.palette.textPrimary.copy(alpha = 0.1f)
+            androidx.compose.material3.IconButton(
+                onClick = onToggleStar,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .size(32.dp)
+            ) {
+                androidx.compose.material3.Icon(
+                    imageVector = if (isStarred) Icons.Filled.Star else Icons.Filled.StarBorder,
+                    contentDescription = "Star",
+                    tint = starColor,
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
-
-        // Title — flush left, ragged right
-        Text(
-            text = title,
-            fontSize = 19.sp,
-            fontWeight = FontWeight.Normal,
-            lineHeight = 25.sp,
-            color = AmbientTheme.palette.textPrimary,
-            overflow = TextOverflow.Ellipsis
-        )
     }
 }
 
+
 private fun getSourceColorNonComposable(source: String): Color {
     return when {
-        source.contains("BBC", ignoreCase = true) -> Color(0xFF6B8CFF)  // Blue
-        source.contains("Guardian", ignoreCase = true) -> Color(0xFF999999)  // Grey
-        source.contains("Reuters", ignoreCase = true) -> Color(0xFFFFA500)  // Orange
-        source.contains("Associated Press", ignoreCase = true) -> Color(0xFF00A4EF)  // AP Blue
-        source.contains("NPR", ignoreCase = true) -> Color(0xFFCC0000)  // NPR Red
-        source.contains("Politico", ignoreCase = true) -> Color(0xFFE81B23)  // Politico Red
-        source.contains("Ars Technica", ignoreCase = true) -> Color(0xFFFF6633)  // Rust
-        source.contains("Hacker News", ignoreCase = true) -> Color(0xFFFF6633)  // Rust
-        else -> Color.Unspecified // Default will be handled by the caller
+        // Tech & Science
+        source.contains("Daring Fireball", ignoreCase = true) -> Color(0xFF6B8CFF) // Electric Blue
+        source.contains("Ars Technica", ignoreCase = true) -> Color(0xFFFF6633)    // Rust
+        source.contains("Hacker News", ignoreCase = true) -> Color(0xFFFF6633)     // Rust
+        source.contains("Quanta", ignoreCase = true) -> Color(0xFF00A4EF)         // Cyan
+        source.contains("STAT", ignoreCase = true) -> Color(0xFFE06C75)            // Soft Red
+
+        // Culture, Ideas & Literature
+        source.contains("Arts & Letters Daily", ignoreCase = true) -> Color(0xFFD4AF37) // Muted Gold
+        source.contains("Noema", ignoreCase = true) -> Color(0xFF98C379)              // Sage Green
+        source.contains("3 Quarks", ignoreCase = true) -> Color(0xFFC678DD)           // Orchid
+        source.contains("Harper", ignoreCase = true) -> Color(0xFF56B6C2)             // Teal
+        source.contains("Marginalian", ignoreCase = true) -> Color(0xFFE5C07B)        // Warm Sand
+        source.contains("Marginal Revolution", ignoreCase = true) -> Color(0xFF98C379) // Sage
+
+        // Wire Services & Journalism
+        source.contains("BBC", ignoreCase = true) -> Color(0xFF6B8CFF)
+        source.contains("Guardian", ignoreCase = true) -> Color(0xFF999999)
+        source.contains("Reuters", ignoreCase = true) -> Color(0xFFFFA500)
+        source.contains("Associated Press", ignoreCase = true) -> Color(0xFF00A4EF)
+        source.contains("NPR", ignoreCase = true) -> Color(0xFFCC0000)
+        source.contains("Politico", ignoreCase = true) -> Color(0xFFE81B23)
+        
+        else -> Color.Unspecified
     }
 }
 
 @Composable
 private fun getSourceColor(source: String): Color {
-    val color = getSourceColorNonComposable(source)
-    return if (color == Color.Unspecified) AmbientTheme.palette.textSecondary else color
+    val raw = getSourceColorNonComposable(source)
+    if (raw == Color.Unspecified) return AmbientTheme.palette.textSecondary
+    
+    // For light backgrounds (Daylight/Twilight), we darken the source colors for contrast.
+    // For dark backgrounds (Interior/Dusk), we keep the vibrant variants.
+    return if (!AmbientTheme.palette.isDark) {
+        Color(
+            red = (raw.red * 0.75f).coerceIn(0f, 1f),
+            green = (raw.green * 0.75f).coerceIn(0f, 1f),
+            blue = (raw.blue * 0.75f).coerceIn(0f, 1f),
+            alpha = raw.alpha
+        )
+    } else {
+        raw
+    }
 }
 
 @Composable

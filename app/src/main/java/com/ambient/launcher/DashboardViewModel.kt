@@ -24,7 +24,8 @@ data class RssFeedItem(
     val source: String,
     val timestamp: String,
     val url: String,
-    val publishedAtEpochMillis: Long
+    val publishedAtEpochMillis: Long,
+    val isStarred: Boolean = false
 )
 
 data class ForecastDay(
@@ -66,7 +67,6 @@ internal val defaultFeedSources = listOf(
     FeedSource("CBC World", "https://www.cbc.ca/cmlink/rss-world"),
     FeedSource("Deutsche Welle", "https://rss.dw.com/rdf/rss-en-all"),
     FeedSource("France 24", "https://www.france24.com/en/rss"),
-    FeedSource("ABC Australia", "https://www.abc.net.au/news/feed/51120/rss.xml"),
     // ── Asia-Pacific ─────────────────────────────────────────────────────────
     FeedSource("Nikkei Asia", "https://asia.nikkei.com/rss/feed/nar"),
     FeedSource("South China Morning Post", "https://www.scmp.com/rss/91/feed"),
@@ -74,13 +74,11 @@ internal val defaultFeedSources = listOf(
     FeedSource("NHK World", "https://www3.nhk.or.jp/nhkworld/en/news/rss.xml"),
     // ── Latin America & Africa ────────────────────────────────────────────────
     FeedSource("MercoPress", "https://en.mercopress.com/rss/latin-america"),
-    FeedSource("Daily Maverick", "https://www.dailymaverick.co.za/dmrss/"),
     FeedSource("AllAfrica", "https://allafrica.com/tools/headlines/rdf/latest/headlines.rdf"),
     // ── Politics & analysis ───────────────────────────────────────────────────
     FeedSource("The Economist", "https://www.economist.com/latest/rss.xml"),
     FeedSource("Foreign Policy", "https://foreignpolicy.com/feed/"),
     FeedSource("Project Syndicate", "https://www.project-syndicate.org/rss"),
-    FeedSource("El Pais English", "https://feeds.elpais.com/mrss-s/pages/ep/site/english.elpais.com/portada"),
     // ── Tech & science ────────────────────────────────────────────────────────
     FeedSource("Ars Technica", "https://feeds.arstechnica.com/arstechnica/index"),
     FeedSource("Hacker News", "https://hnrss.org/frontpage"),
@@ -88,6 +86,7 @@ internal val defaultFeedSources = listOf(
     FeedSource("The Conversation", "https://theconversation.com/articles.atom"),
     FeedSource("Rest of World", "https://restofworld.org/feed/"),
     FeedSource("STAT News", "https://www.statnews.com/feed/"),
+    FeedSource("Daring Fireball", "https://daringfireball.net/feeds/main"),
     // ── Environment & climate ─────────────────────────────────────────────────
     FeedSource("Carbon Brief", "https://www.carbonbrief.org/feed/"),
     FeedSource("Mongabay", "https://news.mongabay.com/feed/"),
@@ -97,6 +96,12 @@ internal val defaultFeedSources = listOf(
     FeedSource("Longreads", "https://longreads.com/feed/"),
     FeedSource("Smithsonian", "https://www.smithsonianmag.com/rss/articles/"),
     FeedSource("Public Domain Review", "https://publicdomainreview.org/feed/"),
+    FeedSource("Arts & Letters Daily", "https://www.aldaily.com/feed"),
+    FeedSource("Noema Magazine", "https://www.noemamag.com/feed/"),
+    FeedSource("3 Quarks Daily", "https://3quarksdaily.com/feed"),
+    FeedSource("Harper’s Magazine", "https://harpers.org/feed"),
+    FeedSource("The Marginalian", "https://feeds.feedburner.com/brainpickings/rss"),
+    FeedSource("Marginal Revolution", "https://feeds.feedblitz.com/marginalrevolution"),
 )
 
 internal class DashboardViewModel(
@@ -128,6 +133,51 @@ internal class DashboardViewModel(
     private val _installedApps = MutableStateFlow<List<AppInfo>>(emptyList())
     val installedApps: StateFlow<List<AppInfo>> = _installedApps.asStateFlow()
 
+    private val _starredUrls = MutableStateFlow<Set<String>>(emptySet())
+    private val _deletedUrls = MutableStateFlow<Set<String>>(emptySet())
+
+    private fun loadRssUserStates() {
+        sharedPreferences?.let { prefs ->
+            val starred = prefs.getStringSet("rss_starred_urls", emptySet()) ?: emptySet()
+            val deleted = prefs.getStringSet("rss_deleted_urls", emptySet()) ?: emptySet()
+            _starredUrls.value = starred
+            _deletedUrls.value = deleted
+        }
+    }
+
+    private fun saveStarredUrls(urls: Set<String>) {
+        sharedPreferences?.edit()?.putStringSet("rss_starred_urls", urls)?.apply()
+    }
+
+    private fun saveDeletedUrls(urls: Set<String>) {
+        sharedPreferences?.edit()?.putStringSet("rss_deleted_urls", urls)?.apply()
+    }
+
+    fun toggleStar(item: RssFeedItem) {
+        val current = _starredUrls.value.toMutableSet()
+        if (current.contains(item.url)) current.remove(item.url) else current.add(item.url)
+        _starredUrls.value = current
+        saveStarredUrls(current)
+        applyUserStatesToFeeds()
+    }
+
+    fun deleteFeedItem(item: RssFeedItem) {
+        val current = _deletedUrls.value.toMutableSet()
+        current.add(item.url)
+        _deletedUrls.value = current
+        saveDeletedUrls(current)
+        applyUserStatesToFeeds()
+    }
+
+    private fun applyUserStatesToFeeds() {
+        val starred = _starredUrls.value
+        val deleted = _deletedUrls.value
+        val currentItems = _feedItems.value.map { it.copy(isStarred = starred.contains(it.url)) }
+            .filter { !deleted.contains(it.url) }
+            .sortedWith(compareByDescending<RssFeedItem> { it.isStarred }.thenByDescending { it.publishedAtEpochMillis })
+        _feedItems.value = currentItems
+    }
+
     private val _batteryState = MutableStateFlow(BatteryUiState())
     val batteryState: StateFlow<BatteryUiState> = _batteryState.asStateFlow()
 
@@ -141,6 +191,7 @@ internal class DashboardViewModel(
     }
 
     init {
+        loadRssUserStates()
         loadCachedFeeds()
         loadCachedWeather()
         loadInstalledApps()
@@ -235,7 +286,13 @@ internal class DashboardViewModel(
                     val processed = feedRepository.buildFreshFeed(combined)
                     
                     if (processed.isNotEmpty()) {
-                        _feedItems.value = processed
+                        val starred = _starredUrls.value
+                        val deleted = _deletedUrls.value
+                        val withStates = processed.map { it.copy(isStarred = starred.contains(it.url)) }
+                            .filter { !deleted.contains(it.url) }
+                            .sortedWith(compareByDescending<RssFeedItem> { it.isStarred }.thenByDescending { it.publishedAtEpochMillis })
+
+                        _feedItems.value = withStates
                         _lastFeedRefreshTime.value = System.currentTimeMillis()
                     }
                 }
@@ -320,26 +377,33 @@ internal class DashboardViewModel(
         val json = sharedPreferences.getString("feed_items_v1", null).orEmpty()
         if (json.isBlank()) return
 
+        val starred = _starredUrls.value
+        val deleted = _deletedUrls.value
+
         val cachedItems = runCatching {
             val array = JSONArray(json)
             buildList {
                 for (index in 0 until array.length()) {
                     val item = array.getJSONObject(index)
-                    add(
-                        RssFeedItem(
-                            title = item.getString("title"),
-                            source = item.getString("source"),
-                            timestamp = item.getString("timestamp"),
-                            url = item.getString("url"),
-                            publishedAtEpochMillis = item.optLong("publishedAtEpochMillis", 0L)
+                    val url = item.getString("url")
+                    if (!deleted.contains(url)) {
+                        add(
+                            RssFeedItem(
+                                title = item.getString("title"),
+                                source = item.getString("source"),
+                                timestamp = item.getString("timestamp"),
+                                url = url,
+                                publishedAtEpochMillis = item.optLong("publishedAtEpochMillis", 0L),
+                                isStarred = starred.contains(url)
+                            )
                         )
-                    )
+                    }
                 }
             }
         }.getOrDefault(emptyList())
 
         if (cachedItems.isNotEmpty()) {
-            _feedItems.value = cachedItems
+            _feedItems.value = cachedItems.sortedWith(compareByDescending<RssFeedItem> { it.isStarred }.thenByDescending { it.publishedAtEpochMillis })
         }
     }
 

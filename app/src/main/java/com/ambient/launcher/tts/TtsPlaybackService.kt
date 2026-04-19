@@ -38,7 +38,7 @@ internal class TtsPlaybackService : android.app.Service() {
     private var ttsReady = false
     private lateinit var mediaSession: MediaSessionCompat
 
-    private var chunks: List<String> = emptyList()
+    private var chunks: List<TtsChunk> = emptyList()
     private var currentIndex = 0
     private var sessionId: String = ""
     private var sessionTitle: String = ""
@@ -83,19 +83,19 @@ internal class TtsPlaybackService : android.app.Service() {
         return START_NOT_STICKY
     }
 
-    fun start(newSessionId: String, title: String, text: List<String>) {
+    fun startStructured(newSessionId: String, title: String, structured: List<TtsChunk>) {
         if (!ttsReady) {
             Log.w(TAG, "TTS not ready yet — ignoring start")
             return
         }
-        if (text.isEmpty()) return
+        if (structured.isEmpty()) return
 
         if (newSessionId == sessionId && !isPaused && chunks.isNotEmpty()) {
             pause(); return
         }
 
         tts.stop()
-        chunks = text
+        chunks = structured
         currentIndex = 0
         sessionId = newSessionId
         sessionTitle = title
@@ -104,6 +104,31 @@ internal class TtsPlaybackService : android.app.Service() {
         startForegroundIfNeeded()
         speakFromCurrent()
         emit()
+    }
+
+    fun seekToIndex(target: Int) {
+        if (chunks.isEmpty()) return
+        val bounded = target.coerceIn(0, chunks.size - 1)
+        tts.stop()
+        currentIndex = bounded
+        isPaused = false
+        speakFromCurrent()
+        emit()
+    }
+
+    fun seekByChunk(delta: Int) = seekToIndex(currentIndex + delta)
+
+    fun seekByParagraph(delta: Int) {
+        if (chunks.isEmpty()) return
+        val currentPara = chunks[currentIndex.coerceIn(0, chunks.size - 1)].paragraphIndex
+        val targetPara = currentPara + delta
+        // Find the first chunk of the target paragraph (or nearest in the direction of travel).
+        val target = if (delta >= 0) {
+            chunks.indexOfFirst { it.paragraphIndex >= targetPara }
+        } else {
+            chunks.indexOfLast { it.paragraphIndex <= targetPara }
+        }
+        seekToIndex(if (target < 0) currentIndex else target)
     }
 
     fun pause() {
@@ -135,22 +160,35 @@ internal class TtsPlaybackService : android.app.Service() {
     private fun speakFromCurrent() {
         for (i in currentIndex until chunks.size) {
             val mode = if (i == currentIndex) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD
-            tts.speak(chunks[i], mode, null, "tts_$i")
+            tts.speak(chunks[i].text, mode, null, "tts_$i")
         }
         updatePlaybackState(PlaybackStateCompat.STATE_PLAYING)
         postNotification()
     }
 
+    private var wordStart = -1
+    private var wordEnd = -1
+
     private val progressListener = object : UtteranceProgressListener() {
-        override fun onStart(utteranceId: String?) { /* no-op */ }
+        override fun onStart(utteranceId: String?) {
+            val idx = utteranceId?.removePrefix("tts_")?.toIntOrNull() ?: return
+            currentIndex = idx
+            wordStart = -1; wordEnd = -1
+            emit()
+        }
         override fun onDone(utteranceId: String?) {
             val idx = utteranceId?.removePrefix("tts_")?.toIntOrNull() ?: return
-            currentIndex = idx + 1
-            if (currentIndex >= chunks.size) {
+            if (idx == chunks.lastIndex) {
                 stopPlayback()
             } else {
+                // Position is advanced by the next onStart; just notify progress bar.
                 emit()
             }
+        }
+        override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
+            wordStart = start
+            wordEnd = end
+            emit()
         }
         @Deprecated("Deprecated in Java")
         override fun onError(utteranceId: String?) { stopPlayback() }
@@ -222,7 +260,10 @@ internal class TtsPlaybackService : android.app.Service() {
                 sessionId = sessionId,
                 isPlaying = !isPaused && chunks.isNotEmpty(),
                 isPaused = isPaused && chunks.isNotEmpty(),
-                progress = if (chunks.isEmpty()) 0f else currentIndex.toFloat() / chunks.size
+                progress = if (chunks.isEmpty()) 0f else currentIndex.toFloat() / chunks.size,
+                chunkIndex = currentIndex,
+                wordStart = wordStart,
+                wordEnd = wordEnd
             )
         )
     }
@@ -248,5 +289,8 @@ internal data class TtsState(
     val sessionId: String = "",
     val isPlaying: Boolean = false,
     val isPaused: Boolean = false,
-    val progress: Float = 0f
+    val progress: Float = 0f,
+    val chunkIndex: Int = 0,
+    val wordStart: Int = -1,
+    val wordEnd: Int = -1
 )

@@ -21,6 +21,7 @@ import com.ambient.launcher.home.LauncherScreen
 import com.ambient.launcher.tts.TtsController
 import com.ambient.launcher.ui.theme.AmbientLauncherTheme
 import com.ambient.launcher.ui.theme.AmbientMode
+import com.ambient.launcher.ui.theme.AmbientSettings
 
 class MainActivity : ComponentActivity() {
     private val dashboardViewModel: DashboardViewModel by viewModels()
@@ -29,6 +30,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         TtsController.ensureBound(applicationContext)
+        AmbientSettings.init(applicationContext)
         
         // ALWAYS mode (API 30+) lets us render content behind the punch-hole,
         // enabling the CutoutRingOverlay to draw decorative rings around it.

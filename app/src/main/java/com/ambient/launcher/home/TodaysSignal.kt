@@ -61,14 +61,18 @@ internal fun TodaysSignal(
 
 /** "Xh Ym ago", "Xm ago", or "just now" */
 internal fun formatElapsed(epochMillis: Long): String {
-    val diffMs = System.currentTimeMillis() - epochMillis
+    val now = System.currentTimeMillis()
+    val diffMs = now - epochMillis
     val mins = (diffMs / 60_000).toInt().coerceAtLeast(0)
     val hours = mins / 60
+    val days = (hours / 24).toInt()
+
     return when {
         mins < 1 -> "just now"
         hours < 1 -> "${mins}m ago"
-        mins % 60 == 0 -> "${hours}h ago"
-        else -> "${hours}h ${mins % 60}m ago"
+        hours < 24 -> "${hours}h ago"
+        days < 7 -> "${days} days ago"
+        else -> "this week"
     }
 }
 

@@ -344,7 +344,7 @@ internal fun SPenNotesScreen(modifier: Modifier = Modifier) {
             ) {
                     Text(
                         text     = if (isRightHanded) "Right Handed" else "Left Handed",
-                        style    = ResponsiveTypography.t2.copy(fontWeight = FontWeight.Medium, fontSize = 13.sp),
+                        style    = ResponsiveTypography.t2.copy(fontWeight = FontWeight.Normal, fontSize = 13.sp),
                         color    = textSecondary.copy(alpha = secondaryAlpha),
                         modifier = Modifier.clickable {
                             isRightHanded = !isRightHanded
@@ -354,7 +354,7 @@ internal fun SPenNotesScreen(modifier: Modifier = Modifier) {
 
                     Text(
                         text     = if (isEraserMode) "Eraser" else "Pen",
-                        style    = ResponsiveTypography.t2.copy(fontWeight = FontWeight.Medium, fontSize = 13.sp),
+                        style    = ResponsiveTypography.t2.copy(fontWeight = FontWeight.Normal, fontSize = 13.sp),
                         color    = if (isEraserMode) accentHigh else textSecondary.copy(alpha = secondaryAlpha),
                         modifier = Modifier.clickable { isEraserMode = !isEraserMode }
                     )
@@ -440,7 +440,7 @@ internal fun SPenNotesScreen(modifier: Modifier = Modifier) {
             ) {
                 Text(
                     text  = "+ New Note",
-                    style = ResponsiveTypography.t3.copy(fontWeight = FontWeight.SemiBold),
+                    style = ResponsiveTypography.t3.copy(fontWeight = FontWeight.Normal, letterSpacing = 1.sp),
                     color = accentHigh.copy(alpha = toolbarAlpha)
                 )
             }

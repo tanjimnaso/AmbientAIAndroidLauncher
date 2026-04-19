@@ -210,6 +210,15 @@ internal fun LauncherScreen(
         }
     }
 
+    // Masthead variant morph: news (page 0) = minimal day+time only,
+    // main (page 1) = full date/season/weather. Smooth crossfade between.
+    val mastheadFullness by remember(pagerState) {
+        derivedStateOf {
+            val pos = pagerState.currentPage + pagerState.currentPageOffsetFraction
+            pos.coerceIn(0f, 1f) // 0 at news, 1 at main
+        }
+    }
+
     // ── Root layout ───────────────────────────────────────────────────────────
     Box(modifier = Modifier.fillMaxSize()) {
         WallpaperBackplane()
@@ -234,7 +243,7 @@ internal fun LauncherScreen(
                     analysisHasError     = analysisHasError,
                     feedItems            = feedItems,
                     isRefreshing         = isFeedRefreshing,
-                    lastFeedRefreshTime  = lastFeedRefreshTime,
+                    lastRefreshTime      = lastFeedRefreshTime,
                     onRefresh            = {
                         dashboardViewModel.refreshFeeds()
                     },
@@ -247,6 +256,8 @@ internal fun LauncherScreen(
                         try { context.startActivity(intent) } catch (_: Exception) {}
                     },
                     onFeedClick          = { uiState.viewingArticle = it },
+                    onToggleStar         = { dashboardViewModel.toggleStar(it) },
+                    onDelete             = { dashboardViewModel.deleteFeedItem(it) },
                     onBriefingClick      = {
                         if (briefingHasError) {
                             briefingViewModel.generateBriefing(
@@ -271,6 +282,8 @@ internal fun LauncherScreen(
                     topApps       = topApps,
                     appsByPackage = appsByPackage,
                     topPadding    = mastheadHeightDp,
+                    topHeadline   = feedItems.firstOrNull()?.title,
+                    weather       = weather,
                     onAppClick    = { app ->
                         context.packageManager.getLaunchIntentForPackage(app.packageName)?.let {
                             it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -285,6 +298,10 @@ internal fun LauncherScreen(
             }
         }
 
+        // Wabi-sabi grain — drawn above pager content, below masthead and overlays.
+        // Subtle (~4% alpha) texture that combats OLED moire at oblique viewing angles.
+        com.ambient.launcher.ui.theme.GrainOverlay()
+
         // ── Floating masthead — shared across pages 0 & 1, fades before page 2 ─
         // Rendered above the pager so it doesn't move during horizontal swipes.
         // Pages reserve top space equal to mastheadHeightDp via their topPadding param.
@@ -298,7 +315,8 @@ internal fun LauncherScreen(
             Masthead(
                 weather  = weather,
                 battery  = battery,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                fullness = mastheadFullness
             )
         }
 
@@ -370,10 +388,12 @@ private fun LeftNewsPage(
     analysisHasError: Boolean,
     feedItems: List<RssFeedItem>,
     isRefreshing: Boolean,
-    lastFeedRefreshTime: Long,
+    lastRefreshTime: Long,
     onRefresh: () -> Unit,
     onOpenCloudNotifications: () -> Unit,
     onFeedClick: (RssFeedItem) -> Unit,
+    onToggleStar: (RssFeedItem) -> Unit,
+    onDelete: (RssFeedItem) -> Unit,
     onBriefingClick: () -> Unit
 ) {
     Column(
@@ -386,7 +406,7 @@ private fun LeftNewsPage(
         Spacer(modifier = Modifier.height(topPadding))
 
         TodaysSignal(
-            lastRefreshTime = lastFeedRefreshTime,
+            lastRefreshTime = lastRefreshTime,
             modifier        = Modifier.padding(horizontal = 28.dp, vertical = 8.dp)
         )
 
@@ -421,8 +441,10 @@ private fun LeftNewsPage(
             HeadlinesSection(
                 feedItems       = feedItems,
                 isRefreshing    = isRefreshing,
-                lastRefreshTime = lastFeedRefreshTime,
+                lastRefreshTime = lastRefreshTime,
                 onFeedClick     = onFeedClick,
+                onToggleStar    = onToggleStar,
+                onDelete        = onDelete,
                 onRefresh       = onRefresh,
                 modifier        = Modifier.fillMaxSize()
             )

@@ -17,6 +17,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ambient.launcher.ui.theme.AmbientSettings
 import com.ambient.launcher.ui.theme.AmbientTheme
 
 @Composable
@@ -27,6 +29,7 @@ internal fun TodaySettingsDialog(
 ) {
     val rssSources = remember { mutableStateOf(configuration.rssSources) }
     val ambientPalette = AmbientTheme.palette
+    val monochrome by AmbientSettings.monochrome.collectAsStateWithLifecycle()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -86,6 +89,30 @@ internal fun TodaySettingsDialog(
                     }) {
                         Icon(Icons.Default.Add, contentDescription = "Add", tint = AmbientTheme.palette.accentHigh)
                     }
+                }
+
+                HorizontalDivider(
+                    color = AmbientTheme.palette.textPrimary.copy(alpha = 0.06f),
+                    thickness = 0.5.dp
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = "Monochrome ink", style = ResponsiveTypography.t2, color = AmbientTheme.palette.textPrimary)
+                        Text(
+                            text = "Flatten cluster colours to ink",
+                            style = ResponsiveTypography.t3,
+                            color = AmbientTheme.palette.textSecondary
+                        )
+                    }
+                    Switch(
+                        checked = monochrome,
+                        onCheckedChange = { AmbientSettings.setMonochrome(it) }
+                    )
                 }
             }
         },

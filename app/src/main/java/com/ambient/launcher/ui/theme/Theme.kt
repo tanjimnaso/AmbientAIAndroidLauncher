@@ -19,6 +19,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
@@ -26,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import java.time.LocalTime
 
@@ -91,22 +93,22 @@ private val DaylightOutdoorPalette = AmbientPalette(
 )
 
 private val DayInteriorHiPalette = AmbientPalette(
-    isDark = false,
-    mainBackground = Color(0xFFE6E9F1), // Soft Blue-Gray
-    panel = Color(0xFFE2E8F0),
-    elevatedPanel = Color(0xFFCBD5E1),
-    accentHigh = Color(0xFF7AAFE7),
-    textPrimary = Color(0xFF0C1118),
-    textSecondary = Color(0xFF64748B),
-    tileBackground = Color(0xFFF8FAFC),
-    errorAccent = Color(0xFFB91C1C),
-    inkColor = Color(0xFF000000), // Black
-    clusterIntelligence = HueIntelligence.copy(alpha = 0.9f),
-    clusterUtility = HueUtility.copy(alpha = 0.9f),
-    clusterCommunication = HueCommunication.copy(alpha = 0.9f),
-    clusterAssistant = HueAssistant.copy(alpha = 0.9f),
-    clusterHealth = HueHealth.copy(alpha = 0.9f),
-    iconOverlayOpacity = 0.15f
+    isDark = true,
+    mainBackground = Color(0xFF4B5158),  // Darker Slate Background
+    panel = Color(0xFF565D65),          // Lifted surface, darker slate
+    elevatedPanel = Color(0xFF636A73),  // Elevated slate
+    accentHigh = Color(0xFFCED4DA),     // Pale gray highlight (replaces ink-accent)
+    textPrimary = Color(0xFFF8F9FA),    // Off-white text
+    textSecondary = Color(0xFFDEE2E6),  // Muted light gray text
+    tileBackground = Color(0xFF565D65), // Matches panel
+    errorAccent = Color(0xFFE06C75),    // Softened red
+    inkColor = Color(0xFFF8F9FA),       // White/Off-white ink
+    clusterIntelligence = HueIntelligence.copy(alpha = 0.7f),
+    clusterUtility = HueUtility.copy(alpha = 0.7f),
+    clusterCommunication = HueCommunication.copy(alpha = 0.7f),
+    clusterAssistant = HueAssistant.copy(alpha = 0.7f),
+    clusterHealth = HueHealth.copy(alpha = 0.7f),
+    iconOverlayOpacity = 0.25f
 )
 
 private val TwilightPalette = AmbientPalette(
@@ -129,22 +131,22 @@ private val TwilightPalette = AmbientPalette(
 )
 
 private val DuskPalette = AmbientPalette(
-    isDark = false,
-    mainBackground = Color(0xFFD4BFC4),  // Heather mauve (cooler than current tan)
-    panel          = Color(0xFFE5D4D8),  // Pale ash rose
-    elevatedPanel  = Color(0xFFC9AFB6),  // Smoked lilac
-    accentHigh     = Color(0xFF5C3D52),  // Aubergine
-    textPrimary    = Color(0xFF2A1F2A),  // Deep plum-grey (NOT black)
-    textSecondary  = Color(0xFF6B5560),  // Mushroom
-    tileBackground = Color(0xFFEEE0E3),  // Blush
-    errorAccent    = Color(0xFF8B3A4A),  // Wine
-    inkColor       = Color(0xFF1F1820),
-    clusterIntelligence  = Color(0xFF3B5278),  // Twilight blue
-    clusterUtility       = Color(0xFF4A6B5C),  // Sage-grey
-    clusterCommunication = Color(0xFF3B5278),
-    clusterAssistant     = Color(0xFF5C3D6B),  // Velvet plum
-    clusterHealth        = Color(0xFF8B3A4A),
-    iconOverlayOpacity = 0.50f
+    isDark = true,
+    mainBackground = Color(0xFF2D2B33),  // Dusty plum-smoke ("sky 20m after sunset")
+    panel          = Color(0xFF3A3742),  // Lifted plum
+    elevatedPanel  = Color(0xFF46424F),  // Smoked iris
+    accentHigh     = Color(0xFF9A8FB8),  // Muted iris
+    textPrimary    = Color(0xFFE0DEF4),  // Soft lavender-white
+    textSecondary  = Color(0xFF908EAA),  // Muted iris-grey
+    tileBackground = Color(0xFF34323C),  // Near-bg tile
+    errorAccent    = Color(0xFFC97A8A),  // Muted wine
+    inkColor       = Color(0xFFE0DEF4),  // Matches textPrimary
+    clusterIntelligence  = Color(0xFF7B91C4),  // Cool twilight blue
+    clusterUtility       = Color(0xFF8AA397),  // Sage-grey
+    clusterCommunication = Color(0xFF7B91C4),
+    clusterAssistant     = Color(0xFFA98FB8),  // Velvet plum
+    clusterHealth        = Color(0xFFC97A8A),
+    iconOverlayOpacity = 0.30f
 )
 
 private val LocalAmbientPalette = staticCompositionLocalOf { DaylightOutdoorPalette }
@@ -154,6 +156,18 @@ object AmbientTheme {
     val palette: AmbientPalette @Composable get() = LocalAmbientPalette.current
     val mode: AmbientMode @Composable get() = LocalAmbientMode.current
 }
+
+/**
+ * Collapses all cluster hues to [inkColor] for a Kindle/Muji monochrome read.
+ * Keeps the daily palette (background, text, accent) so transitions still feel seasonal.
+ */
+private fun AmbientPalette.toMonochrome(): AmbientPalette = copy(
+    clusterIntelligence = inkColor,
+    clusterUtility = inkColor,
+    clusterCommunication = inkColor,
+    clusterAssistant = inkColor,
+    clusterHealth = inkColor
+)
 
 @Composable
 fun animatePaletteAsState(target: AmbientPalette): AmbientPalette {
@@ -191,7 +205,9 @@ fun AmbientLauncherTheme(content: @Composable () -> Unit) {
         AmbientMode.DUSK -> DuskPalette
         AmbientMode.TWILIGHT -> TwilightPalette
     }
-    val animatedPalette = animatePaletteAsState(targetPalette)
+    val monochrome by AmbientSettings.monochrome.collectAsStateWithLifecycle()
+    val effectivePalette = if (monochrome) targetPalette.toMonochrome() else targetPalette
+    val animatedPalette = animatePaletteAsState(effectivePalette)
     val view = LocalView.current
 
     if (!view.isInEditMode) {

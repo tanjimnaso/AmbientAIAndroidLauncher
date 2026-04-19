@@ -17,9 +17,17 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ambient.launcher.BriefingViewModel
-import com.ambient.launcher.tts.TtsIconButton
+import com.ambient.launcher.tts.TtsChunk
+import com.ambient.launcher.tts.TtsChunker
+import com.ambient.launcher.tts.TtsController
+import com.ambient.launcher.tts.TtsMediaStrip
 import com.ambient.launcher.ui.theme.AmbientTheme
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -62,15 +70,23 @@ internal fun AnalysisScreen(
                 }
             }
     ) {
+        // Build chunk list + per-section chunk ranges from current briefing + analysis.
+        val analysisTextForChunks = analysisState
+        val render: AnalysisRender? = remember(briefingText, analysisTextForChunks) {
+            if (analysisTextForChunks.isNullOrBlank()) null
+            else buildAnalysisRender(briefingText, parseAnalysisSections(analysisTextForChunks))
+        }
+        val ttsState by TtsController.state.collectAsStateWithLifecycle()
+        val ttsContext = LocalContext.current
+
         if (showArchives && cachedEntry != null) {
             // ── Archives overlay ──────────────────────────────────────────────
             ArchivesView(
                 entry = cachedEntry,
                 onDismiss = { showArchives = false }
             )
-        } else if (analysisState != null && !isLoading) {
+        } else if (render != null && !isLoading) {
             // ── Analysis content ──────────────────────────────────────────────
-            val sections = parseAnalysisSections(analysisState!!)
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -79,9 +95,21 @@ internal fun AnalysisScreen(
                     .padding(horizontal = 32.dp, vertical = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
-                item { AnalysisHeader(briefingText) }
-                items(sections) { section ->
-                    AnalysisSection(label = section.first, body = section.second)
+                item {
+                    AnalysisHeaderHighlighted(
+                        briefingText = briefingText,
+                        briefingSentences = render.briefingSentences,
+                        ttsState = ttsState,
+                        onSeek = { TtsController.seekTo(ttsContext, it) }
+                    )
+                }
+                items(render.sections) { section ->
+                    AnalysisSection(
+                        label = section.label,
+                        sentences = section.sentences,
+                        ttsState = ttsState,
+                        onSeek = { TtsController.seekTo(ttsContext, it) }
+                    )
                 }
                 if (cachedEntry != null) {
                     item {
@@ -99,7 +127,7 @@ internal fun AnalysisScreen(
                         )
                     }
                 } else {
-                    item { Spacer(modifier = Modifier.height(80.dp)) }
+                    item { Spacer(modifier = Modifier.height(120.dp)) }
                 }
             }
         } else {
@@ -123,7 +151,7 @@ internal fun AnalysisScreen(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 HorizontalDivider(
-                    color = AmbientTheme.palette.accentHigh.copy(alpha = 0.15f),
+                    color = AmbientTheme.palette.accentHigh.copy(alpha = 0.08f),
                     thickness = 0.5.dp,
                     modifier = Modifier.padding(bottom = 20.dp)
                 )
@@ -165,8 +193,8 @@ internal fun AnalysisScreen(
                         text = "ARCHIVES",
                         style = ResponsiveTypography.t3.copy(
                             fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = 1.sp
+                            fontWeight = FontWeight.Normal,
+                            letterSpacing = 1.5.sp
                         ),
                         color = AmbientTheme.palette.accentHigh.copy(alpha = 0.6f),
                         modifier = Modifier.clickable { showArchives = true }
@@ -177,17 +205,67 @@ internal fun AnalysisScreen(
             }
         }
 
-        // ── Top-right TTS button (drawn last so it stacks above content) ───
-        val analysisText = analysisState
-        if (!analysisText.isNullOrBlank() && !showArchives) {
-            TtsIconButton(
+        // ── Bottom MediaStrip (drawn last so it stacks above content) ──────
+        if (render != null && !showArchives) {
+            TtsMediaStrip(
                 sessionId = "analysis:${briefingText.hashCode()}",
                 title = "News Analysis",
-                textProvider = { "$briefingText. $analysisText" },
+                chunks = render.chunks,
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .statusBarsPadding()
-                    .padding(top = 16.dp, end = 20.dp)
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        AmbientTheme.palette.drawerBackground.copy(alpha = 0.85f)
+                    )
+            )
+        }
+    }
+}
+
+@Composable
+private fun AnalysisHeaderHighlighted(
+    briefingText: String,
+    briefingSentences: List<Pair<Int, String>>,
+    ttsState: com.ambient.launcher.tts.TtsState,
+    onSeek: (Int) -> Unit
+) {
+    Column {
+        Text(
+            text = "NEWS ANALYSIS",
+            style = ResponsiveTypography.t3.copy(
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Normal,
+                letterSpacing = 1.5.sp
+            ),
+            color = AmbientTheme.palette.accentHigh.copy(alpha = 0.5f),
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        HorizontalDivider(
+            color = AmbientTheme.palette.accentHigh.copy(alpha = 0.08f),
+            thickness = 0.5.dp,
+            modifier = Modifier.padding(bottom = 20.dp)
+        )
+        if (briefingSentences.isNotEmpty()) {
+            com.ambient.launcher.tts.HighlightableText(
+                sentences = briefingSentences,
+                ttsState = ttsState,
+                style = ResponsiveTypography.t3.copy(
+                    fontFamily = FontFamily.Monospace,
+                    lineHeight = 18.sp
+                ),
+                baseColor = AmbientTheme.palette.textSecondary.copy(alpha = 0.7f),
+                activeColor = AmbientTheme.palette.accentHigh,
+                onSeek = onSeek,
+                modifier = Modifier.padding(bottom = 28.dp)
+            )
+        } else if (briefingText.isNotBlank()) {
+            Text(
+                text = briefingText,
+                style = ResponsiveTypography.t3.copy(
+                    fontFamily = FontFamily.Monospace,
+                    lineHeight = 18.sp
+                ),
+                color = AmbientTheme.palette.textSecondary.copy(alpha = 0.7f),
+                modifier = Modifier.padding(bottom = 28.dp)
             )
         }
     }
@@ -207,7 +285,7 @@ private fun AnalysisHeader(briefingText: String) {
             modifier = Modifier.padding(bottom = 8.dp)
         )
         HorizontalDivider(
-            color = AmbientTheme.palette.accentHigh.copy(alpha = 0.15f),
+            color = AmbientTheme.palette.accentHigh.copy(alpha = 0.08f),
             thickness = 0.5.dp,
             modifier = Modifier.padding(bottom = 20.dp)
         )
@@ -275,20 +353,58 @@ private fun ArchivesView(
                 modifier = Modifier.padding(bottom = 20.dp)
             )
             HorizontalDivider(
-                color = AmbientTheme.palette.accentHigh.copy(alpha = 0.15f),
+                color = AmbientTheme.palette.accentHigh.copy(alpha = 0.08f),
                 thickness = 0.5.dp,
                 modifier = Modifier.padding(bottom = 20.dp)
             )
         }
         items(sections) { section ->
-            AnalysisSection(label = section.first, body = section.second)
+            ArchivedSection(label = section.first, body = section.second)
         }
         item { Spacer(modifier = Modifier.height(80.dp)) }
     }
 }
 
 @Composable
-private fun AnalysisSection(label: String, body: String) {
+private fun AnalysisSection(
+    label: String,
+    sentences: List<Pair<Int, String>>,
+    ttsState: com.ambient.launcher.tts.TtsState,
+    onSeek: (Int) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 48.dp)
+    ) {
+        HorizontalDivider(
+            color = AmbientTheme.palette.textPrimary.copy(alpha = 0.06f),
+            thickness = 0.5.dp,
+            modifier = Modifier.padding(bottom = 20.dp)
+        )
+        Text(
+            text = label,
+            style = ResponsiveTypography.t3.copy(
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Normal,
+                letterSpacing = 1.sp
+            ),
+            color = AmbientTheme.palette.accentHigh.copy(alpha = 0.6f),
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+        com.ambient.launcher.tts.HighlightableText(
+            sentences = sentences,
+            ttsState = ttsState,
+            style = ResponsiveTypography.t2.copy(lineHeight = 28.sp),
+            baseColor = AmbientTheme.palette.textPrimary.copy(alpha = 0.88f),
+            activeColor = AmbientTheme.palette.accentHigh,
+            onSeek = onSeek
+        )
+    }
+}
+
+@Composable
+private fun ArchivedSection(label: String, body: String) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -315,6 +431,53 @@ private fun AnalysisSection(label: String, body: String) {
             color = AmbientTheme.palette.textPrimary.copy(alpha = 0.88f)
         )
     }
+}
+
+/** Backing data for the highlighted analysis render — chunks, briefing sentences, and per-section ranges. */
+private data class AnalysisRender(
+    val chunks: List<TtsChunk>,
+    val briefingSentences: List<Pair<Int, String>>,
+    val sections: List<RenderSection>
+)
+
+private data class RenderSection(
+    val label: String,
+    val sentences: List<Pair<Int, String>>
+)
+
+private fun buildAnalysisRender(
+    briefing: String,
+    sections: List<Pair<String, String>>
+): AnalysisRender {
+    val chunks = mutableListOf<TtsChunk>()
+    var paraIdx = 0
+
+    // Briefing = paragraph 0
+    val briefingSentences = mutableListOf<Pair<Int, String>>()
+    val briefingClean = briefing.replace(Regex("""\s+"""), " ").trim()
+    if (briefingClean.isNotEmpty()) {
+        for (s in TtsChunker.splitSentences(briefingClean)) {
+            briefingSentences += chunks.size to s
+            chunks += TtsChunk(s, paraIdx)
+        }
+        paraIdx++
+    }
+
+    val rendered = sections.map { (label, body) ->
+        val sentences = mutableListOf<Pair<Int, String>>()
+        val paragraphs = body.split(Regex("""\n\n+""")).map { it.replace(Regex("""\s+"""), " ").trim() }
+            .filter { it.isNotEmpty() }
+        for (p in paragraphs) {
+            for (s in TtsChunker.splitSentences(p)) {
+                sentences += chunks.size to s
+                chunks += TtsChunk(s, paraIdx)
+            }
+            paraIdx++
+        }
+        RenderSection(label = label, sentences = sentences)
+    }
+
+    return AnalysisRender(chunks = chunks, briefingSentences = briefingSentences, sections = rendered)
 }
 
 /**

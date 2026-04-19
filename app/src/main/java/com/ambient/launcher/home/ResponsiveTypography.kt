@@ -69,13 +69,13 @@ internal object ResponsiveTypography {
     )
 
     // ── T1: Content Headline (RSS Titles, Major Items) ────────────────────
-    // Inter Regular, 17sp. Scannable, readable without the strain of bold weight.
+    // Inter Regular, 16sp. Scannable, readable without the strain of bold weight.
     // Usage: Read titles, major item headers, card titles
     val t1 = TextStyle(
         fontFamily = InterFontFamily,
-        fontSize = 17.sp,
+        fontSize = 16.sp,
         fontWeight = FontWeight.Normal,   // 400
-        lineHeight = 21.sp,
+        lineHeight = 20.sp,
         letterSpacing = 0.sp
     )
 

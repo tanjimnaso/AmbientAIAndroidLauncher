@@ -6,6 +6,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
@@ -25,12 +26,19 @@ import java.util.Locale
  *
  * Only designed for S22 Ultra (center-cutout display).
  */
+/**
+ * @param fullness 0f = minimal (day + time only, news page),
+ *                 1f = full (date, season chip, weather, battery sub-line — main page).
+ *                 Intermediate values crossfade row 2 for a smooth swipe transition.
+ */
 @Composable
 internal fun Masthead(
     weather: WeatherUiState,
     battery: BatteryUiState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    fullness: Float = 1f
 ) {
+    val secondaryAlpha = fullness.coerceIn(0f, 1f)
     val today      = LocalDate.now()
     val dayName    = today.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH).uppercase()
     val dateString = "${today.month.getDisplayName(TextStyle.FULL, Locale.ENGLISH)} ${today.dayOfMonth}, ${today.year}"
@@ -83,34 +91,39 @@ internal fun Masthead(
                     color = AmbientTheme.palette.textSecondary.copy(alpha = 0.6f)
                 )
 
-                // Battery: percentage and time left stacked
+                // Battery: percentage always visible; sub-line only at higher fullness.
                 Column(
                     modifier = Modifier.padding(bottom = 6.dp),
                     verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.End // Align right since it's on the right edge
+                    horizontalAlignment = Alignment.End
                 ) {
                     Text(
                         text = "${battery.percentage}%",
                         style = ResponsiveTypography.t3,
                         color = AmbientTheme.palette.textSecondary.copy(alpha = 0.6f)
                     )
-                    val batterySub = if (battery.isCharging) "CHG"
-                    else "${battery.remainingHours}h ${battery.remainingMinutes}m"
-                    Text(
-                        text = batterySub,
-                        style = ResponsiveTypography.t3.copy(fontSize = 9.sp),
-                        color = AmbientTheme.palette.textSecondary.copy(alpha = 0.6f),
-                        maxLines = 1
-                    )
+                    if (secondaryAlpha > 0.01f) {
+                        val batterySub = if (battery.isCharging) "CHG"
+                        else "${battery.remainingHours}h ${battery.remainingMinutes}m"
+                        Text(
+                            text = batterySub,
+                            style = ResponsiveTypography.t3.copy(fontSize = 9.sp),
+                            color = AmbientTheme.palette.textSecondary.copy(alpha = 0.6f),
+                            maxLines = 1,
+                            modifier = Modifier.alpha(secondaryAlpha)
+                        )
+                    }
                 }
             }
         }
 
-        // ── Row 2: DATE/SEASON (Start) | TEMP (End) ──────────────────────────────────
+        // ── Row 2: DATE/SEASON (Start) | TEMP (End) ─ hidden in minimal mode ──
+        if (secondaryAlpha <= 0.01f) return@Column
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 28.dp),
+                .padding(horizontal = 28.dp)
+                .alpha(secondaryAlpha),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top
         ) {

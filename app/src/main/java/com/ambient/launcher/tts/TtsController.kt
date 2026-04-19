@@ -52,23 +52,47 @@ internal object TtsController {
      * - same sessionId, paused          → resume
      * - different sessionId             → stop previous, start new
      */
-    fun toggle(context: Context, sessionId: String, title: String, text: String) {
-        val ctx = context.applicationContext
-        ContextCompat.startForegroundService(ctx, Intent(ctx, TtsPlaybackService::class.java))
-        val svc = service ?: run {
-            ensureBound(ctx)
-            // Retry shortly via a one-shot post; simplest: ignore first tap before bind completes.
-            return
-        }
+    fun toggle(context: Context, sessionId: String, title: String, chunks: List<TtsChunk>) {
+        val svc = ensureStarted(context) ?: return
         val s = _state.value
         when {
             s.sessionId == sessionId && s.isPlaying -> svc.pause()
             s.sessionId == sessionId && s.isPaused  -> svc.resume()
-            else -> svc.start(sessionId, title, TtsChunker.chunk(text))
+            else -> svc.startStructured(sessionId, title, chunks)
         }
     }
 
+    /** Legacy string entrypoint: treat as one paragraph, sentence-split internally. */
+    fun toggle(context: Context, sessionId: String, title: String, text: String) {
+        toggle(context, sessionId, title, TtsChunker.chunkParagraphs(listOf(text)))
+    }
+
+    /** Jump to an absolute chunk index and play from there. */
+    fun seekTo(context: Context, index: Int) {
+        val svc = ensureStarted(context) ?: return
+        svc.seekToIndex(index)
+    }
+
+    /** Move by +1 / -1 sentence (chunk). */
+    fun seekSentence(context: Context, delta: Int) {
+        val svc = service ?: return
+        svc.seekByChunk(delta)
+    }
+
+    /** Move to first chunk of the next / previous paragraph. */
+    fun seekParagraph(context: Context, delta: Int) {
+        val svc = service ?: return
+        svc.seekByParagraph(delta)
+    }
+
     fun stop() { service?.stopPlayback() }
+
+    private fun ensureStarted(context: Context): TtsPlaybackService? {
+        val ctx = context.applicationContext
+        ContextCompat.startForegroundService(ctx, Intent(ctx, TtsPlaybackService::class.java))
+        if (service == null) { ensureBound(ctx); return null }
+        return service
+    }
 }
 
 /**
@@ -80,13 +104,58 @@ internal object TtsController {
  *   progress bar but more overhead per onDone callback.
  * - TextToSpeech has a per-utterance character ceiling (around 4000 on most engines). Chunks must stay under that.
  */
+internal data class TtsChunk(val text: String, val paragraphIndex: Int)
+
 internal object TtsChunker {
     private const val TARGET_MAX = 360
     private const val HARD_MAX = 3500
 
-    private val SENTENCE_BOUNDARY = Regex("""(?<=[.!?])\s+(?=[A-Z0-9"'“])""")
+    private val SENTENCE_BOUNDARY = Regex("""(?<=[.!?])\s+(?=[A-Z0-9"'"])""")
     private val COMMA_BOUNDARY = Regex(""",\s+""")
 
+    /**
+     * Split paragraphs into sentence-level chunks, preserving paragraph identity.
+     * Each resulting chunk is one "seek unit" — tapping a sentence jumps to its index,
+     * double-tapping prev/next jumps to the first chunk of the prev/next paragraph.
+     */
+    fun chunkParagraphs(paragraphs: List<String>): List<TtsChunk> {
+        val out = mutableListOf<TtsChunk>()
+        for ((pIdx, para) in paragraphs.withIndex()) {
+            val clean = para.replace(Regex("""\s+"""), " ").trim()
+            if (clean.isEmpty()) continue
+            for (s in splitSentences(clean)) {
+                out += TtsChunk(s.take(HARD_MAX), pIdx)
+            }
+        }
+        return out
+    }
+
+    /**
+     * Public sentence splitter used by the article renderer to wrap text in seek-able spans.
+     */
+    fun splitSentences(text: String): List<String> {
+        val out = mutableListOf<String>()
+        for (rawSentence in text.split(SENTENCE_BOUNDARY)) {
+            val s = rawSentence.trim()
+            if (s.isEmpty()) continue
+            if (s.length <= TARGET_MAX) { out += s; continue }
+            // Run-on sentence: sub-split at commas, pack into <= TARGET_MAX groups.
+            val parts = s.split(COMMA_BOUNDARY)
+            val buf = StringBuilder()
+            for ((i, part) in parts.withIndex()) {
+                val piece = if (i < parts.lastIndex) "$part," else part
+                if (buf.isNotEmpty() && buf.length + piece.length + 1 > TARGET_MAX) {
+                    out += buf.toString().trim(); buf.clear()
+                }
+                if (buf.isNotEmpty()) buf.append(' ')
+                buf.append(piece)
+            }
+            if (buf.isNotEmpty()) out += buf.toString().trim()
+        }
+        return out
+    }
+
+    /** Legacy single-paragraph chunker — kept for callers that don't care about paragraphs. */
     fun chunk(text: String): List<String> {
         val normalized = text
             .replace(Regex("""\s+"""), " ")
