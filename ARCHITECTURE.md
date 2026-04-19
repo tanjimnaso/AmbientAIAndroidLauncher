@@ -5,182 +5,219 @@
 - **UI:** Jetpack Compose + Material 3 primitives
 - **Build:** Android Gradle Plugin `9.1.0`, Gradle wrapper `9.3.1`
 - **Android target:** `compileSdk 36`, `targetSdk 36`
-- **Persistence today:** `SharedPreferences` for launcher config, home visibility, tile sizes,
-  RSS cache, weather cache, and battery reset point
-- **Persistence planned:** `Room` for notes/feed/cache layers; `DataStore` for launcher config
-- **Network today:** OkHttp for RSS and weather
-- **Network planned:** Retrofit / OkHttp for richer AI and feed integrations
+- **Persistence:** `SharedPreferences` for launcher config, home visibility, RSS cache, weather cache, notes, ambient-mode overrides.
+- **Network:** OkHttp for RSS, weather, and Gemini.
 
 ---
 
-## Current App Structure
-
-### 1. Activity Shell
-- `MainActivity` is intentionally thin.
-- Owns `DashboardViewModel` and `AgenticAIViewModel`.
-- Hands control to the launcher UI package.
-
-### 2. Home Package
-- **`home/LauncherScreen.kt`**
-  Orchestrates pager navigation, vertical home scrolling, section ordering, and home-vs-index
-  app density. Collects `batteryState` from `DashboardViewModel` and passes it to `HomePage`.
-  *Added:* Supports "Clipboard Drop-Zone" for high-friction workflows (screenshots to IDE).
-
-- **`home/LauncherCards.kt`**
-  Header, project-card row, calendar rail, app tile grid, action cards (Wallet, Battery),
-  and note input. Tiles are architected as **status-indicators** (badge-aware) rather than mere static icons.
-
-- **`home/LauncherConfig.kt`**
-  Bucket model, assignment persistence, home visibility, tile size per package, and default
-  seeding heuristics. Persists a `Map<String, TileSize>` alongside existing assignment maps.
-
-- **`home/LauncherLayout.kt`**
-  Shared spacing, sizing, and edge-bleed layout logic.
-  The 6-column tile grid constants live here.
-
-- **`home/AppValueScorer.kt`** *(planned)*
-  Scores installed apps using REACH × FREQUENCY (1–3 each). Outputs `AppValueScore` which
-  determines default `isOnHome`, default `TileSize`, and suggested bucket. Run once at first
-  boot or on manual re-score trigger. Optionally enhanced by `UsageStatsManager` data if the
-  `PACKAGE_USAGE_STATS` permission is granted.
-
-### 3. Theme Layer
-- **`ui/theme/Theme.kt`**
-  Four ambient modes: `EARLY_MORNING`, `DAY`, `BLUE_HOUR`, `LATE_NIGHT`.
-  **Design Language:** Muted earthy/clay tones (Charcoal, Sage, Ochre). 
-  - Airiness achieved via generous padding and 28.dp rounded dialog containers.
-  - No neon accents.
-- **`ui/theme/Type.kt`**
-  Five-level hierarchy:
-  - D1 (44–52sp, Syne Light) — ambient anchor
-  - D2 (28–34sp, Syne Regular) — section titles
-  - T1 (16–18sp, Inter SemiBold) — tile labels
-  - T2 (14–15sp, Inter Regular) — body/metadata
-  - T3 (11–12sp, Inter Regular) — index/captions
-
----
-
-### 4. Data Layers
-- **`DashboardViewModel`**
-  - RSS Aggregator: Fetches 9 curated sources in parallel (OkHttp, 10s timeout, browser UA).
-  - Weather: Open-Meteo API, coarse location, 30-minute refresh cycle.
-  - Battery: `BroadcastReceiver` on `ACTION_BATTERY_CHANGED`, models discharge as linear from unplug point.
-  - App list: `LauncherApps`, sorted by `UsageStatsManager` (7-day window) if permission granted.
-- **`BriefingViewModel`**
-- **`AgenticAIViewModel`**
-  - Gemini-backed assistant wired to the briefing tap action.
-  - On tap, builds a structured 5-part analysis prompt and sends it directly to the Gemini app via `ACTION_SEND`. Falls back to launching Gemini, then browser search.
-
----
-
-### 5. RSS Pipeline
-
-The feed pipeline runs entirely without an LLM and has five sequential stages:
+## Package Layout
 
 ```
-Parallel fetch (9 sources, 8 items/source)
-  → FeedFilter       — drops sports, personal opinion columns, and clickbait patterns
-  → 48-hour gate     — drops articles older than 48h or with unparseable dates (epoch = 0L)
+com.ambient.launcher
+├── MainActivity.kt              — thin activity shell; owns DashboardViewModel + BriefingViewModel
+├── DashboardViewModel.kt        — weather, battery, app list, RSS orchestration
+├── BriefingViewModel.kt         — Gemini briefing + deep analysis
+├── HttpClient.kt                — shared OkHttp client
+├── BatteryUtils.kt              — discharge modelling
+├── data/repository/
+│   ├── AppRepository.kt         — PackageManager + UsageStatsManager queries
+│   ├── FeedRepository.kt        — parallel RSS fetch + cache
+│   ├── FeedUtils.kt             — filter, dedup, freshness gate
+│   └── WeatherRepository.kt     — Open-Meteo client + cache
+├── home/
+│   ├── LauncherScreen.kt        — 3-page pager, masthead variants, ambient reveal
+│   ├── HomeAppsScreen.kt        — main page: asymmetric hero + row, NowMoment
+│   ├── NowMoment.kt             — rotating headline / weather / deep-time glance
+│   ├── Masthead.kt              — time, date, weather, battery; fullness-aware
+│   ├── AppMenuCard.kt           — swipe-up app menu, 15 buckets
+│   ├── SPenNotesScreen.kt       — full-screen canvas with auto-hide toolbar
+│   ├── AnalysisScreen.kt        — Gemini-powered structured analysis + TTS
+│   ├── ArticleViewerScreen.kt   — reading-mode article + TTS + media strip
+│   ├── LauncherCards.kt         — briefing card, feed list, signal line
+│   ├── LauncherConfig.kt        — bucket model, pins, home visibility
+│   ├── LauncherDialogs.kt       — long-press edit / bucket picker
+│   ├── LauncherLayout.kt        — shared spacing + sizing constants
+│   ├── ResponsiveTypography.kt  — screen-size-adaptive type scale
+│   ├── TodaysSignal.kt          — contextual week/month line
+│   ├── WallpaperHelper.kt       — system wallpaper access helpers
+│   └── AppValueScorer.kt        — REACH × FREQUENCY seeding heuristic
+├── tts/
+│   ├── TtsController.kt         — single TextToSpeech owner
+│   ├── TtsPlaybackService.kt    — foreground service; lock-screen controls
+│   ├── TtsMediaStrip.kt         — bottom media bar with scrubber
+│   ├── HighlightableText.kt     — sentence + word highlight synced to TTS
+│   └── ArticleTtsPrep.kt        — sentence segmentation, word offsets
+└── ui/theme/
+    ├── Theme.kt                 — AmbientTheme + 4 palettes + AmbientMode
+    ├── Color.kt                 — palette types
+    ├── Type.kt                  — Syne + Inter font registration, 5-tier scale
+    ├── GrainOverlay.kt          — tiled noise via PorterDuff.OVERLAY
+    └── AmbientSettings.kt       — app-scoped StateFlow for ink mode, palette override
+```
+
+---
+
+## The 3-Page Pager
+
+`LauncherScreen` hosts a `HorizontalPager` with three pages:
+
+| Page | Index | Content |
+|---|---|---|
+| News | 0 | `BriefingCard` + feed list + analysis entry |
+| Main | 1 (default) | `HomeAppsScreen` — asymmetric layout, NowMoment |
+| Notes | 2 | `SPenNotesScreen` — canvas with auto-hide toolbar |
+
+### Masthead Fullness
+
+The masthead is drawn at the top across all three pages, but its **fullness** varies with pager position. A `derivedStateOf` computes:
+
+```kotlin
+val mastheadFullness = pagerState.currentPage + pagerState.currentPageOffsetFraction
+```
+
+Fullness `1f` = main page, full detail (time + secondary lines). Below `0.8f` we're off-main and secondary lines fade out. This is passed as `fullness: Float` into `Masthead` which gates rendering of the date/season and battery-hours sub-rows.
+
+### Ambient Reveal
+
+On the main page only, the secondary line sits at 30% opacity by default. A `PointerEventPass.Initial` listener on the root Box watches for any press — without consuming — and flips `mastheadRevealed = true`. An `animateFloatAsState` pulses the alpha to 1.0, and a `LaunchedEffect(mastheadRevealed) { delay(3000); mastheadRevealed = false }` restores quiet mode.
+
+The same pattern applies inside `SPenNotesScreen`: toolbar auto-hides after 4s, tap the top 80dp strip to bring it back. `AnimatedVisibility` (not manual alpha) wraps the toolbar so invisible buttons don't capture taps.
+
+---
+
+## Main Page Layout (HomeAppsScreen)
+
+Asymmetric, off-grid — the exact opposite of the classic launcher grid:
+
+```
+┌─────────────────────────────────┐
+│      (weight 0.4 — breathing)   │
+│                                 │
+│          · Now moment ·         │   ← rotating line, 30s cadence
+│                                 │
+│      (weight 0.6 — breathing)   │
+│                                 │
+│   [app] [app] [app] [app]       │   ← secondary row of 4
+│                                 │
+│                    ┌────────┐   │
+│                    │  hero  │   │   ← contextual hero, bottom-right
+│                    └────────┘   │
+└─────────────────────────────────┘
+```
+
+**Contextual hero** — `pickContextualHero(topApps, pinnedRow, hour)` recomputes every 5 minutes via a `LaunchedEffect` hour-tick. It filters out apps already in the pinned row and picks the highest-used app matching the current time-of-day preference buckets:
+
+```kotlin
+val preferredBuckets = when (hour) {
+    in 5..10  -> listOf(NEWS, AI, UTILITIES)
+    in 11..16 -> listOf(SOCIAL, UTILITIES, AI)
+    in 17..21 -> listOf(ENTERTAINMENT, NEWS, SOCIAL)
+    else      -> listOf(TOOLS, UTILITIES, NEWS)
+}
+```
+
+**Now moment** — `NowMoment.kt` rotates every 30 seconds between three sources: top headline ("NOW"), weather sentence ("TODAY"), and a `centuryGlanceForToday()` deep-time glance ("DEEP TIME"). Crossfade is 800ms; daily glance is keyed to `LocalDate.toEpochDay() % list.size` so the same glance shows all day.
+
+---
+
+## Theme Layer
+
+### Four Ambient Modes
+
+`AmbientMode` enum with four palettes, auto-switched by local hour via `rememberAmbientMode()`:
+
+| Mode | Hours | Character |
+|---|---|---|
+| `DAYLIGHT_OUTDOOR` | 6–10 | bright, cool, high chroma text |
+| `DAY_INTERIOR_HI` | 11–16 | warm paper, muted |
+| `DUSK` | 17–20 | slate blue + amber |
+| `TWILIGHT` | 21–5 | deep burnt umber, warm cream text |
+
+Each palette defines `AmbientPalette(mainBackground, panel, elevatedPanel, accentHigh, textPrimary, textSecondary, tileBackground, errorAccent, inkColor, clusterIntelligence, clusterUtility, clusterCommunication, clusterAssistant, clusterHealth, iconOverlayOpacity)`.
+
+### Typography
+
+Five-level hierarchy in `Type.kt`:
+- D1 (44–52sp, Syne Light) — ambient anchor
+- D2 (28–34sp, Syne Regular) — section titles
+- T1 (16–18sp, Inter SemiBold) — tile labels
+- T2 (14–15sp, Inter Regular) — body / metadata
+- T3 (11–12sp, Inter Regular) — captions / index
+
+`ResponsiveTypography.kt` scales these by screen density so tablets don't get microtext.
+
+### Grain + Ink Mode
+
+- `GrainOverlay` paints a cached 192×192 noise bitmap via `BitmapShader` + `PorterDuffXfermode(OVERLAY)` at 4% alpha. The bitmap is `remember`-cached by tile size + seed so it's drawn once per composition tree.
+- `AmbientSettings` exposes a `StateFlow<Boolean>` for ink-mode (monochrome desaturation). Consumed via `collectAsStateWithLifecycle()`.
+
+---
+
+## Data Layers
+
+### DashboardViewModel
+- **Weather** — `WeatherRepository` wraps Open-Meteo; coarse location; 30-minute refresh.
+- **Battery** — `BroadcastReceiver` on `ACTION_BATTERY_CHANGED`; linear discharge model from unplug point; `batteryState: StateFlow<BatteryState>`.
+- **Apps** — `AppRepository` queries `LauncherApps` + `UsageStatsManager` (7-day window if permission granted); icons lazy-loaded via `rememberAppIcon` with a 150-entry `LruCache`.
+- **Feed** — triggers `FeedRepository.refresh()`; exposes `feed: StateFlow<List<RssFeedItem>>`.
+
+### BriefingViewModel
+- **Briefing** — Gemini Flash; single sentence; 6-hour cache.
+- **Analysis** — Gemini Pro; structured sections (SYSTEMIC · HISTORICAL · PHILOSOPHY · ECONOMIC · FORECAST); 24-hour cache under `briefing_cache/last_analysis`.
+- On briefing-tap, builds a 5-part deep-dive prompt and opens the Gemini app via `ACTION_SEND`, falling back to launch → browser search.
+
+---
+
+## RSS Pipeline
+
+Five sequential stages in `FeedRepository` + `FeedUtils`:
+
+```
+Parallel fetch (9 sources, 8 items/source, 10s timeout)
+  → FeedFilter       — drops sports, opinion columns, clickbait
+  → 48-hour gate     — drops items older than 48h or with unparseable dates (epoch = 0L)
   → sort newest-first
-  → FeedDeduplicator — Jaccard title similarity ≥ 0.40 collapses same-story clusters; newest wins
-  → distinctBy URL   — safety net for exact duplicate links
+  → FeedDeduplicator — Jaccard title similarity ≥ 0.40, keep newest
+  → distinctBy URL   — exact-duplicate safety net
   → take(30)
 ```
 
-**Sources** (defined in `defaultFeedSources`, overridable via SharedPrefs `rss_sources_v2`):
-| Source | Category |
-|---|---|
-| Associated Press | World / wire |
-| Reuters | World / wire |
-| BBC World | World |
-| BBC Technology | Technology |
-| The Guardian World | World |
-| NPR News | Politics / US |
-| Politico | Politics |
-| Ars Technica | Technology / Science |
-| Hacker News (hnrss.org) | Technology / community |
+**Sources** (`defaultFeedSources`, overridable via SharedPrefs `rss_sources_v2`): AP, Reuters, BBC World, BBC Tech, Guardian, NPR, Politico, Ars Technica, Hacker News.
 
-**Key implementation details:**
-- `parseEpochMillis()` returns `0L` on failure (not `System.currentTimeMillis()`). Articles with `0L` are excluded by the freshness gate — this prevents articles with malformed dates from floating to the top of the feed.
-- `FeedFilter` checks against three blocklists: sports league/competition terms, opinion column prefixes (`"opinion:"`, `"why i "`, etc.), and clickbait regex patterns. Blocklists are intentionally narrow to avoid false positives.
-- `FeedDeduplicator` fingerprints each title by removing stop-words and punctuation, then computes pairwise Jaccard similarity. The input is already sorted newest-first so the cluster head is always the most recent version of a story.
-- Per-source cap is 8 items so no single outlet can dominate the 30-item feed.
+**Implementation notes**
+- `parseEpochMillis()` returns `0L` on failure — never `System.currentTimeMillis()` — so malformed dates can't float to the top.
+- `FeedFilter` uses three narrow blocklists (sports terms, opinion prefixes, clickbait regex) to avoid false positives.
+- `FeedDeduplicator` fingerprints titles (strip stop-words + punctuation), then Jaccard-compares pairs; input is pre-sorted newest-first so the cluster head is always the freshest version.
+- Per-source cap of 8 items prevents any single outlet dominating.
 
 ---
 
-### 6. Analysis Screen
+## TTS Pipeline
 
-Tapping the ambient Signal on the home screen opens an in-app `AnalysisScreen` — a full-screen reading view that calls Gemini Pro and renders the structured analysis without leaving the launcher.
+A single `TtsController` owns one `TextToSpeech` instance app-wide. `TtsPlaybackService` is a foreground service exposing lock-screen controls.
 
-**Flow:**
-```
-tap Signal
-  → AnalysisScreen (loading spinner)
-  → BriefingViewModel.generateAnalysis(briefingText)
-     → cache hit? → render immediately
-     → cache miss → Gemini Pro API call (~3-5s)
-  → LazyColumn reading view (same structure as ArticleViewerScreen)
-  → back / swipe-right → dismiss
-```
+`ArticleTtsPrep` segments article text into sentences with character offsets; `HighlightableText` composes a `Text` with two overlays — current sentence (background tint) and current word (underline) — driven by TTS progress callbacks.
 
-**Key differences from ArticleViewerScreen:**
-- Content source is Gemini Pro API, not HTML fetch + Jsoup parse
-- Input is the current briefing sentence (already in state)
-- Sections rendered as labeled blocks (SYSTEMIC · HISTORICAL · PHILOSOPHY · ECONOMIC · FORECAST)
-- 24h cache stored in `briefing_cache` SharedPrefs under key `last_analysis`
-
-**Model selection:**
-- Ambient Signal: `BuildConfig.GEMINI_MODEL` (Flash — speed matters)  
-- Deep Analysis: `gemini-2.5-pro` (hardcoded constant — quality matters)
+Used by both `ArticleViewerScreen` (web article reading) and `AnalysisScreen` (Gemini deep dive).
 
 ---
 
-## Tile Grid System
+## State Persistence
 
-The home tile grid uses a **6-column internal grid** (`LazyVerticalGrid(GridCells.Fixed(6))`),
-replacing the previous `FlowRow(maxItemsInEachRow = 3)`.
+`LauncherConfig` persists to `SharedPreferences`:
+- Bucket assignments (`Map<String, BucketId>`)
+- Home-visible package set
+- Pinned row packages + hero package (ordered list)
+- Bucket ordering, hidden buckets
+- Battery `resetPct`
+- RSS source overrides
+- Ambient palette override (null = auto by hour)
 
-| TileSize | Col span | AspectRatio | Visual size |
-|---|---|---|---|
-| SMALL | 1 of 6 | 1f | 0.5 × 0.5 of regular |
-| REGULAR | 2 of 6 | 1f | baseline 1×1 |
-| WIDE | 4 of 6 | 2f | 2×1 (same height as regular) |
-
-SMALL tiles may only appear in 2×2 groups (4 tiles occupying one REGULAR slot).
-They must not be mixed with REGULAR tiles in the same row.
-
-Default tile size is set by `AppValueScorer` at seeding time:
-- Score 8–10 → WIDE
-- Score 6–7 → REGULAR
-
-User overrides are persisted in `LauncherConfig.tileSizes: Map<String, TileSize>`.
+Each app belongs to at most one bucket. Apps can be bucket-assigned but kept app-menu-only (`isOnHome = false`). Section removal moves apps back to unassigned.
 
 ---
-
-## State Model
-- Installed apps are queried from `PackageManager`; icons load lazily via `rememberAppIcon`
-  (Dispatchers.IO, LruCache of 150 entries).
-- **Clipboard/Screenshot Monitor:** Observes system clipboard/recent screenshot buffer to expose
-  direct manipulation targets in the `AgenticAIViewModel`.
-- Launcher config stores: bucket assignments, home-visible package set, tile sizes per package,
-  bucket ordering, hidden buckets, and battery `resetPct`.
-- Each app belongs to at most one bucket.
-- Apps can be assigned to a bucket but kept app-menu-only (`isOnHome = false`).
-- Section removal moves apps back to unassigned/app-menu-only.
 
 ## Wallpaper Strategy
-- `windowShowWallpaper=true` in activity theme.
-- Compose draws transparent content and ambient scrims over the real system wallpaper.
-- No direct wallpaper bitmap access.
-
----
-
-## Planned Next Layers
-- `AppValueScorer` — keyword heuristic + optional `UsageStatsManager` scoring.
-- Tile size picker in the long-press edit UI (SMALL / REGULAR / WIDE segmented control).
-- Font migration: `Syne` downloaded from Google Fonts, registered in `Type.kt`.
-- Dark mode `tileBackground` color update across all three dark palettes.
-- `DataStore` migration from `SharedPreferences` for launcher config.
-- Real widget hosting for selected sections.
-- Dedicated repositories for feed, notes, and AI.
-- Static location map.
+- `windowShowWallpaper=true` in the activity theme.
+- Compose draws transparent content + ambient scrims over the system wallpaper.
+- No direct wallpaper bitmap access; `WallpaperHelper` only handles the subtle top/bottom gradient scrims.

@@ -1,135 +1,115 @@
 # Art Direction
 
-## The Vibe
-Calm ambient launcher meets editorial grouping, with a secondary industrial navigation layer.
-
-The project is no longer aiming for a generic "sci-fi dashboard". The current visual language is:
-- dark ocean wallpaper and scrims
-- variable-size rounded tile geometry on home, where size signals importance
-- sparse grouping and deliberate whitespace without card-within-card nesting
-- a separate text-only, thin-line industrial page for structure and navigation
+The launcher is designed to be **quiet, literate, and slightly analogue** — closer to a well-laid newspaper than a phone home screen. The visual system is built from a small number of durable choices rather than a thick stylesheet.
 
 ---
 
-## Core Visual Rules
+## Four Ambient Modes
 
-### 1. Typography
+Palettes switch automatically based on a combination of **ambient light (lux sensor)** and **local time**. High-lux sunlight always takes priority; below that, time-of-day decides.
 
-**Font pairing: `Syne` + `Inter`**
-- `Syne` replaces `DM Serif Display` for all display and ambient moments.
-  Syne is a geometric sans-serif display face with architectural character — it harmonizes
-  with Inter (same geometric foundation) rather than contrasting against it, producing a
-  more cohesive system across both the ambient home and the industrial index.
-- `Inter` remains for body, labels, settings, and utility text. Do not introduce a third typeface.
+| Mode | Condition | Character |
+|---|---|---|
+| `DAYLIGHT_OUTDOOR` | lux > 2500 | Bright white background, charcoal text, high-chroma cluster hues. Readable in direct sun. |
+| `DAY_INTERIOR_HI` | 06:30–16:30, moderate lux | Darker slate background, off-white text, softened hues at 70% alpha. Warm-office feel. |
+| `DUSK` | 16:30–18:30 | Dusty plum-smoke background, muted iris accent, soft lavender-white text. |
+| `TWILIGHT` | 18:30–06:30 | Deep burnt umber background, warm cream text, sienna-amber accent. Candle-warm. |
 
-**Five-level type hierarchy:**
+Palette transitions are animated over **1000ms** via `animateColorAsState` so the change is peripheral, not jarring.
 
-| Level | Role | Size | Weight | Face | Usage |
-|---|---|---|---|---|---|
-| D1 | Ambient anchor | 44–52sp | Light 300 | Syne | Day name, time display |
-| D2 | Section / card title | 28–34sp | Regular 400 | Syne | Index section names, card headings |
-| T1 | Navigation label | 16–18sp | SemiBold 600 | Inter | Tile labels, index sub-labels |
-| T2 | Body | 14–15sp | Regular 400 | Inter | Quote, card body, metadata |
-| T3 | Micro / caption | 11–12sp | Regular 400 | Inter | Index number prefix (01, 02…), tile sublabels |
+### Core Hues (pre-palette-adjustment)
 
-**Critical ratio:** D1 must be at least 3× the size of T3. The current industrial index uses
-`indexLabel` at ~14sp and section `title` at ~22sp — a 1.6× ratio that reads as two columns,
-not as label + headline. Target is closer to 3:1 (12sp prefix, 34sp section name).
+| Hue | Role | Base color |
+|---|---|---|
+| Intelligence | AI, news, reading | `#0EA5E9` sky |
+| Utility | Tools, system | `#22C55E` green |
+| Communication | Social, messaging | `#3B82F6` blue |
+| Assistant | Launcher, shell | `#8B5CF6` violet |
+| Health | Safety, errors | `#DC2626` red |
 
-**Type bleeding:**
-Type may intentionally extend beyond the container edge using:
-- `TextOverflow.Visible` + `softWrap = false` on single-line display text
-- `Modifier.graphicsLayer { clip = false }` on the parent container
-- The existing `horizontalBleed()` modifier for full-bleed rows
+Each palette either uses these directly (DaylightOutdoor), pulls them to 70% alpha (DayInteriorHi), or substitutes muted versions tuned to the background (Dusk, Twilight).
 
-This is used to signal swipeability on the industrial index page (partially visible adjacent
-section title bleeds from the right edge, echoing the Windows Phone Pivot pattern).
+### Monochrome Ink Mode
 
-### 2. Color
-
-- Home page stays ambient, cool, and wallpaper-led.
-- Late night is deep ocean — not pure OLED black.
-- Small high-brightness accents are acceptable; large white surfaces are not.
-- The industrial page is pale/paper-toned with thin black rules.
-
-**Dark mode tile luminance (critical fix):**
-The three dark palettes (EARLY_MORNING, BLUE_HOUR, LATE_NIGHT) currently use
-`tileBackground = #181C20` (luminance ≈ 0.009) against a wallpaper scrim at approximately
-`#0D1A26` (luminance ≈ 0.006). The contrast ratio is ~1.05:1 — effectively invisible.
-
-Target tile color: `#3E5268` (blue-cast, harmonizes with ocean wallpaper, luminance ≈ 0.066,
-contrast ratio ≈ 2.2:1 against the scrim). A 1dp border at `rgba(255,255,255,0.10)` may be
-added to tile edges as a depth highlight. DAY mode tiles (`#F2F0E9`) are already well-contrasted
-and do not need adjustment.
-
-Material 3 principle applied: in dark mode, higher-elevation surfaces are *lighter*, not just
-shadowed. Tiles float above the wallpaper — they must be perceptibly lighter than the scrim.
-
-### 3. Shapes
-
-- Home uses launcher-owned rounded tile geometry and soft ambient surfaces.
-- Three tile sizes exist: SMALL (0.5×0.5), REGULAR (1×1), WIDE (2×1).
-  Size signals importance — high-value apps default to WIDE, standard apps to REGULAR.
-- Text-only rails and the industrial page use thin borders and flatter structure.
-- App icons sit inside the tile system; the icon itself does not define the shape.
-- Icons are contained by launcher geometry: consistent inset, slightly smaller than the tile
-  surface, so OEM icon shapes do not visually dominate.
-
-### 4. Composition
-
-- Group by intent, not by default Android launcher convention.
-- **No section headers on home.** The home page is a flat, silent grid. The industrial index
-  provides the textual structure.
-- **No cards inside cards.** App sections float directly on the ambient background.
-- Variable tile sizes break up the grid visually, creating focal points and natural eye movement.
-  A row of all REGULAR tiles is monotonous — WIDE tiles anchor rows and guide the eye.
-- Home shows approximately 15–20 apps maximum, determined by value scoring.
-  The full app inventory lives in the industrial index layer, not on home.
-- SMALL tiles only appear grouped: pairs of 2 side-by-side, stacked 2 deep, occupying
-  one REGULAR tile slot. They are never mixed with REGULAR tiles in the same row.
-
-### 5. Navigation
-
-- Home is scroll-first.
-- Left page is index-first.
-- Avoid a persistent bottom launcher bar.
-- Home keeps only the ~15–20 launch surfaces worth immediate reach.
-- The rest of the app inventory belongs in the industrial/index layer.
-- The industrial index page uses the type-bleed technique for its section heading row to
-  signal the swipe gesture spatially, without chevrons or arrows.
+A single `AmbientSettings.monochrome` `StateFlow<Boolean>` toggle collapses all cluster hues into the palette's `inkColor`. Background, text, and accent stay — so the palette still feels seasonal, but all app-badge colour is gone. For reading-focused sessions.
 
 ---
 
-## App Value Principle
+## Typography
 
-Not all apps earn a home screen tile. Home is a curated edit, not an inventory.
+Two families, rigidly used:
 
-An app earns home placement by scoring ≥ 6 on the REACH × FREQUENCY matrix:
+- **Syne** — display only. Geometric, slightly eccentric. Used for the masthead time and section titles.
+- **Inter** — everything else. Body, labels, captions, UI.
 
-```
-REACH:      Reflex (3) — opened without thinking
-            Browse (2) — opened with mild intent
-            Lookup (1) — opened to find something specific
+### The 5-Tier Scale
 
-FREQUENCY:  Daily  (3)
-            Weekly (2)
-            Rarely (1)
+| Tier | Size | Family | Role |
+|---|---|---|---|
+| D1 | 44–52 sp, Light | Syne | Ambient anchor (masthead clock) |
+| D2 | 28–34 sp, Regular | Syne | Section titles |
+| T1 | 16–18 sp, SemiBold | Inter | Tile labels, primary body |
+| T2 | 14–15 sp, Regular | Inter | Secondary body, metadata |
+| T3 | 11–12 sp, Regular | Inter | Captions, index, micro-labels |
 
-Score = REACH × FREQUENCY. Threshold for home = 6.
-```
+`ResponsiveTypography.kt` scales the base sizes by screen density class so tablets don't shrink to microtext.
 
-High-value apps (score 8–10) default to WIDE tiles. Standard home apps (6–7) default to
-REGULAR. Apps below 6 go to the industrial index only. Users can override any assignment
-via long-press on the tile.
+### Rules
+- **No bold unless structural.** Weight creates hierarchy at D1/D2/T1 only.
+- **Letter-spacing favours openness.** Caps always carry +1.5sp to +1.8sp tracking.
+- **Alpha over weight for de-emphasis.** Secondary text sits at 0.85–0.50 alpha; we don't reach for a lighter weight.
+- **Ambient reveal relies on alpha, never size.** A hidden masthead line is 0.30 alpha, not shrunken.
 
 ---
 
-## Reference Mapping
+## Motion
 
-- **Industrial menu references (mb8, mb9):** Inform the left-swipe index page. Index number
-  prefix should be dramatically smaller than the section name (~3:1 ratio).
-- **Editorial card reference (mb14 "Your Projects"):** Content clusters at top of card; the
-  lower half is breathing room, not a second label zone. Metadata sits adjacent to the title.
-- **Minimal clock reference (mb15):** Single dominant typographic element. "Friday" owns the
-  screen. Everything else recedes.
-- **Interest tag reference (mb11):** Informs text-led pill rails and lighter navigation.
+Motion is **slow and non-announcing**:
+
+| Purpose | Duration | Curve |
+|---|---|---|
+| Palette transitions | 1000ms | tween |
+| NowMoment crossfade | 800ms | tween |
+| Ambient reveal in | 200ms | tween |
+| Ambient reveal out | 400ms | tween |
+
+**Nothing snaps.** No spring curves on primary surfaces. No wobble, no overshoot. Reveals start quickly but fade out slowly, which reads as "the system noticed but didn't interrupt you."
+
+---
+
+## Texture
+
+A **4%-alpha tiled grain overlay** is painted over the whole launcher using `PorterDuff.OVERLAY` blend. The bitmap is a 192×192 deterministic noise pattern (seeded once, cached forever), tiled via `BitmapShader` with `Shader.TileMode.REPEAT`.
+
+Why OVERLAY and not flat alpha: OVERLAY preserves the palette's identity — dark pixels stay dark, bright stay bright, only the mids pick up tooth. This keeps burnt umber looking like burnt umber instead of muddy grey.
+
+The overlay has two jobs:
+1. **Wabi-sabi tooth.** Pure digital surfaces feel clinical; a tiny amount of texture reads as paper, vellum, or dyed linen.
+2. **OLED moire defeat.** On AMOLED at low brightness, flat colour bands can shimmer. 4% noise breaks the banding without being visible as noise.
+
+---
+
+## Layout Principles
+
+### Off-grid by default
+The main page is intentionally asymmetric. A row of 4 secondary apps sits **above-left**; a larger contextual hero sits **bottom-right**. The negative space is load-bearing — it's what makes the layout feel composed rather than populated.
+
+### Editorial stack on the news page
+Briefing → signal line → feed list, all one column, generous gutter, ragged-right body. Reads like a long-form paper.
+
+### One thing at a time on the notes page
+Full-screen canvas. Auto-hiding toolbar. Nothing else in view.
+
+### Ambient reveal over persistent chrome
+Secondary chrome (the masthead's date/battery sub-line; the notes toolbar) is hidden by default and summoned with a non-consuming tap. This is the cornerstone of the calm aesthetic — **the launcher should look empty until you ask something of it.**
+
+---
+
+## What we don't do
+
+- **No neon accents.** Max chroma is palette-level; saturation gets cut hard at the cluster layer.
+- **No dark mode / light mode toggle.** Palettes switch by lux + time. The user doesn't pick.
+- **No shadows.** Elevation is conveyed by panel colour, not drop-shadow.
+- **No widgets.** All cards are launcher-native Compose, not `AppWidgetHost`.
+- **No icons in running text.** Glyphs belong in their own slot or they don't appear.
+- **No progress bars, no spinners** except for genuinely async loads (Gemini analysis). Everything else reveals when ready.

@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -20,7 +21,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import com.ambient.launcher.WeatherUiState
+import com.ambient.launcher.RssFeedItem
 import com.ambient.launcher.ui.theme.AmbientTheme
 import kotlinx.coroutines.delay
 import org.json.JSONArray
@@ -50,27 +51,29 @@ private const val PINNED_ROW_SIZE = 4
 @Composable
 internal fun MiddleHomeScreen(
     topApps: List<AppInfo>,
+    allApps: List<AppInfo>,
     appsByPackage: Map<String, AppInfo>,
     onAppClick: (AppInfo) -> Unit,
     onSwipeUp: () -> Unit,
-    topHeadline: String? = null,
-    weather: WeatherUiState = WeatherUiState(),
+    topHeadline: RssFeedItem? = null,
+    onHeadlineClick: (RssFeedItem) -> Unit = {},
     topPadding: androidx.compose.ui.unit.Dp = 0.dp,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    ambientAlpha: Float = 1f
 ) {
     val context = LocalContext.current
     val (pinnedRow, savePinnedRow) = rememberPinnedHomeApps(context, topApps, appsByPackage)
 
     // Recompute hero every 5 minutes so the slot can drift across time-of-day.
-    var hourTick by remember { mutableStateOf(Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) }
+    var tick by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) {
         while (true) {
             delay(5 * 60 * 1000L)
-            hourTick = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+            tick++
         }
     }
-    val heroApp = remember(topApps, pinnedRow, hourTick) {
-        pickContextualHero(topApps, pinnedRow, hourTick)
+    val heroApp = remember(allApps, pinnedRow, tick) {
+        pickContextualHero(allApps, pinnedRow, tick)
     }
 
     val screenHeight = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp
@@ -86,12 +89,15 @@ internal fun MiddleHomeScreen(
                 }
             }
     ) {
-        Spacer(modifier = Modifier.height(topPadding))
-        Spacer(modifier = Modifier.weight(0.4f))
+        Spacer(modifier = Modifier.height(topPadding + 120.dp))
+        Spacer(modifier = Modifier.weight(0.15f))
 
-        NowMoment(topHeadline = topHeadline, weather = weather)
+        NowMoment(
+            topHeadline = topHeadline,
+            onHeadlineClick = onHeadlineClick
+        )
 
-        Spacer(modifier = Modifier.weight(0.6f))
+        Spacer(modifier = Modifier.weight(0.85f))
 
         // Row of 4 secondary apps — left-aligned, loose spacing.
         SecondaryAppRow(
@@ -101,6 +107,7 @@ internal fun MiddleHomeScreen(
             modifier   = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
+                .alpha(ambientAlpha)
         )
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -110,7 +117,8 @@ internal fun MiddleHomeScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
+                    .padding(horizontal = 24.dp)
+                    .alpha(ambientAlpha),
                 horizontalArrangement = Arrangement.End
             ) {
                 HeroAppTile(
@@ -127,28 +135,23 @@ internal fun MiddleHomeScreen(
 // ── Contextual hero selection ─────────────────────────────────────────────────
 
 /**
- * Picks the hero app based on current hour. Maps time-of-day to a preference
- * order over [LauncherBucket]s, then picks the most-used app from `topApps`
- * matching the first non-empty bucket. Excludes apps already in the secondary row.
+ * Picks the hero app. Prioritizes a random app from the NEWS bucket.
+ * Uses a tick-based seed to keep the selection stable for the rotation interval.
  */
 private fun pickContextualHero(
-    topApps: List<AppInfo>,
+    allApps: List<AppInfo>,
     pinnedRow: List<AppInfo>,
-    hour: Int
+    tick: Int
 ): AppInfo? {
     val rowPackages = pinnedRow.map { it.packageName }.toSet()
-    val pool = topApps.filter { it.packageName !in rowPackages }
-    if (pool.isEmpty()) return topApps.firstOrNull()
-
-    val preferredBuckets = when (hour) {
-        in 5..10  -> listOf(LauncherBucket.NEWS, LauncherBucket.AI, LauncherBucket.UTILITIES)
-        in 11..16 -> listOf(LauncherBucket.SOCIAL, LauncherBucket.UTILITIES, LauncherBucket.AI)
-        in 17..21 -> listOf(LauncherBucket.ENTERTAINMENT, LauncherBucket.NEWS, LauncherBucket.SOCIAL)
-        else      -> listOf(LauncherBucket.TOOLS, LauncherBucket.UTILITIES, LauncherBucket.NEWS)
+    val newsPool = allApps.filter { it.bucket == LauncherBucket.NEWS && it.packageName !in rowPackages }
+    
+    return if (newsPool.isNotEmpty()) {
+        newsPool.random(kotlin.random.Random(tick))
+    } else {
+        // Fallback to top app not in row
+        allApps.firstOrNull { it.packageName !in rowPackages }
     }
-    return preferredBuckets.firstNotNullOfOrNull { bucket ->
-        pool.firstOrNull { it.bucket == bucket }
-    } ?: pool.first()
 }
 
 // ── Pinned-row persistence ────────────────────────────────────────────────────
@@ -330,25 +333,25 @@ private fun HeroAppTile(
     val bucketColor = app.bucket.themeColor(AmbientTheme.palette)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp)
     ) {
         Box(
-            modifier = Modifier.size(96.dp),
+            modifier = Modifier.size(56.dp),
             contentAlignment = Alignment.Center
         ) {
             AppIcon(
                 packageName = app.packageName,
-                modifier    = Modifier.size(80.dp),
+                modifier    = Modifier.size(48.dp),
                 colorFilter = getAmbientIconFilter(bucketColor)
             )
         }
         Text(
             text     = app.label,
-            style    = ResponsiveTypography.t2,
-            color    = AmbientTheme.palette.textPrimary,
+            style    = ResponsiveTypography.t2.copy(fontSize = 12.sp),
+            color    = AmbientTheme.palette.textPrimary.copy(alpha = 0.7f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )

@@ -202,6 +202,16 @@ internal fun SPenNotesScreen(modifier: Modifier = Modifier) {
     val disabledAlpha  = if (isOutdoor) 0.5f else 0.38f
     val actionBgAlpha  = if (isOutdoor) 0f else 0.16f
 
+    // Ambient reveal: toolbar hidden by default to let the canvas breathe.
+    // A tap on the top strip surfaces it; auto-hides after 4 seconds.
+    var toolbarRevealed by remember { mutableStateOf(false) }
+    LaunchedEffect(toolbarRevealed) {
+        if (toolbarRevealed) {
+            kotlinx.coroutines.delay(4000L)
+            toolbarRevealed = false
+        }
+    }
+
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val screenHeightPx = with(density) { maxHeight.toPx() }
         val scrollState    = rememberScrollState()
@@ -328,7 +338,28 @@ internal fun SPenNotesScreen(modifier: Modifier = Modifier) {
             }
         }
 
-        // ── Toolbar ───────────────────────────────────────────────────────────
+        // ── Top-edge tap strip — reveals the hidden toolbar ───────────────────
+        // Only mounted while the toolbar is hidden. When the toolbar is up,
+        // the strip disappears so its buttons get taps directly.
+        if (!toolbarRevealed) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .height(80.dp)
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null
+                    ) { toolbarRevealed = true }
+            )
+        }
+
+        // ── Toolbar (appears on reveal; fades in/out) ─────────────────────────
+        androidx.compose.animation.AnimatedVisibility(
+            visible = toolbarRevealed,
+            enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(200)),
+            exit  = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(400))
+        ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -445,6 +476,7 @@ internal fun SPenNotesScreen(modifier: Modifier = Modifier) {
                 )
             }
         }
+        } // end AnimatedVisibility
     }
 }
 

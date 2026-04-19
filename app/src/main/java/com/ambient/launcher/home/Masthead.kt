@@ -11,8 +11,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import com.ambient.launcher.R
 import com.ambient.launcher.BatteryUiState
-import com.ambient.launcher.WeatherUiState
 import com.ambient.launcher.ui.theme.AmbientTheme
 import kotlinx.coroutines.delay
 import java.time.LocalDate
@@ -21,29 +23,27 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
+val DMSerifDisplay = FontFamily(Font(R.font.dm_serif_display_regular))
+
 /**
  * Masthead
  *
- * Only designed for S22 Ultra (center-cutout display).
- */
-/**
- * @param fullness 0f = minimal (day + time only, news page),
- *                 1f = full (date, season chip, weather, battery sub-line — main page).
- *                 Intermediate values crossfade row 2 for a smooth swipe transition.
+ * Reimagined as a Japandi editorial layout.
+ * Uses serif typography for the primary time/day anchor to feel like a magazine header.
+ * Reduces utility "noise" by removing labels (%, CHG) in favor of pure figures.
  */
 @Composable
 internal fun Masthead(
-    weather: WeatherUiState,
     battery: BatteryUiState,
     modifier: Modifier = Modifier,
     fullness: Float = 1f
 ) {
-    val secondaryAlpha = fullness.coerceIn(0f, 1f)
+    val secondaryAlpha = (fullness - 0.2f).coerceIn(0f, 1f)
     val today      = LocalDate.now()
     val dayName    = today.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH).uppercase()
-    val dateString = "${today.month.getDisplayName(TextStyle.FULL, Locale.ENGLISH)} ${today.dayOfMonth}, ${today.year}"
-    val season     = remember { getCurrentSeason() }
-
+    val monthName  = today.month.getDisplayName(TextStyle.FULL, Locale.ENGLISH).uppercase()
+    val dateString = "${today.dayOfMonth} $monthName"
+    
     var currentTime by remember { mutableStateOf(LocalTime.now()) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -51,122 +51,99 @@ internal fun Masthead(
             currentTime = LocalTime.now()
         }
     }
-    val timeString = currentTime.format(DateTimeFormatter.ofPattern("h:mm a")).lowercase()
-    val density = LocalDensity.current
+    val timeString = currentTime.format(DateTimeFormatter.ofPattern("h:mm"))
+    val amPm       = currentTime.format(DateTimeFormatter.ofPattern("a")).lowercase()
 
     Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(0.dp)
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 28.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // ── Row 1: DAY (Start) | TIME & BATTERY (End) ────────────────
-        // Using a Row ensures the elements cannot overlap. 
-        // We push the time/battery to the end, respecting the cutout/system insets.
+        // ── Primary Editorial Row ────────────────
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 28.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Bottom
+            verticalAlignment = Alignment.Top
         ) {
-            // Left side: Day Name
-            Text(
-                text = dayName,
-                style = ResponsiveTypography.h1,
-                color = AmbientTheme.palette.textSecondary.copy(alpha = 0.6f),
-                // Weight allows it to take up space without pushing the right side off screen.
-                // We don't want it to squish the time, so we let the time dictate its width.
-                modifier = Modifier.weight(1f, fill = false),
-                maxLines = 1, // Prevent it from pushing layout down if text scales up
-            )
-
-            // Right side: Time and Battery
-            Row(
-                modifier = Modifier.offset(x = with(density) { 60.toDp() }),
-                verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            // THE TIME - Large Serif Anchor
+            Row(verticalAlignment = Alignment.Bottom) {
                 Text(
                     text = timeString,
-                    style = ResponsiveTypography.h1,
-                    color = AmbientTheme.palette.textSecondary.copy(alpha = 0.6f)
+                    style = ResponsiveTypography.h1.copy(
+                        fontFamily = DMSerifDisplay,
+                        fontSize = 54.sp,
+                        letterSpacing = (-1).sp
+                    ),
+                    color = AmbientTheme.palette.textPrimary.copy(alpha = 0.85f)
                 )
+                Text(
+                    text = amPm,
+                    style = ResponsiveTypography.t3.copy(fontSize = 12.sp),
+                    color = AmbientTheme.palette.textSecondary.copy(alpha = 0.4f),
+                    modifier = Modifier.padding(bottom = 12.dp, start = 4.dp)
+                )
+            }
 
-                // Battery: percentage always visible; sub-line only at higher fullness.
-                Column(
-                    modifier = Modifier.padding(bottom = 6.dp),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.End
-                ) {
+            // THE DAY - Vertical/Rotated aesthetic or thin caps
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = dayName,
+                    style = ResponsiveTypography.t3.copy(
+                        letterSpacing = 4.sp,
+                        fontSize = 10.sp
+                    ),
+                    color = AmbientTheme.palette.textSecondary.copy(alpha = 0.5f)
+                )
+                if (secondaryAlpha > 0.01f) {
                     Text(
-                        text = "${battery.percentage}%",
-                        style = ResponsiveTypography.t3,
-                        color = AmbientTheme.palette.textSecondary.copy(alpha = 0.6f)
+                        text = dateString,
+                        style = ResponsiveTypography.t3.copy(fontSize = 10.sp, letterSpacing = 1.sp),
+                        color = AmbientTheme.palette.textSecondary.copy(alpha = 0.3f),
+                        modifier = Modifier.alpha(secondaryAlpha)
                     )
-                    if (secondaryAlpha > 0.01f) {
-                        val batterySub = if (battery.isCharging) "CHG"
-                        else "${battery.remainingHours}h ${battery.remainingMinutes}m"
-                        Text(
-                            text = batterySub,
-                            style = ResponsiveTypography.t3.copy(fontSize = 9.sp),
-                            color = AmbientTheme.palette.textSecondary.copy(alpha = 0.6f),
-                            maxLines = 1,
-                            modifier = Modifier.alpha(secondaryAlpha)
-                        )
-                    }
                 }
             }
         }
 
-        // ── Row 2: DATE/SEASON (Start) | TEMP (End) ─ hidden in minimal mode ──
-        if (secondaryAlpha <= 0.01f) return@Column
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 28.dp)
-                .alpha(secondaryAlpha),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
-        ) {
+        // ── Secondary Thin Line ────────────────
+        if (secondaryAlpha > 0.1f) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .alpha(secondaryAlpha),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                // Battery as a pure figure + charging dot
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "${battery.percentage}",
+                        style = ResponsiveTypography.t3.copy(fontSize = 9.sp),
+                        color = AmbientTheme.palette.textSecondary.copy(alpha = 0.4f)
+                    )
+                    if (battery.isCharging) {
+                        Box(
+                            modifier = Modifier
+                                .size(3.dp)
+                                .background(AmbientTheme.palette.accentHigh.copy(alpha = 0.6f), androidx.compose.foundation.shape.CircleShape)
+                        )
+                    }
+                }
+
+                // Minimal Weather / Season (simplified)
                 Text(
-                    text = dateString,
-                    style = ResponsiveTypography.t2,
-                    color = AmbientTheme.palette.textSecondary.copy(alpha = 0.6f)
-                )
-                SeasonChip(season = season)
-            }
-            if (weather.isAvailable) {
-                Text(
-                    text = "${weather.temperatureText} ${weather.summary.lowercase()}",
-                    style = ResponsiveTypography.t2,
-                    color = AmbientTheme.palette.textSecondary.copy(alpha = 0.6f)
+                    text = getCurrentSeason().uppercase(),
+                    style = ResponsiveTypography.t3.copy(fontSize = 8.sp, letterSpacing = 2.sp),
+                    color = AmbientTheme.palette.textSecondary.copy(alpha = 0.3f)
                 )
             }
         }
     }
 }
 
-@Composable
-private fun SeasonChip(season: String, modifier: Modifier = Modifier) {
-    val color = when (season) {
-        "Spring" -> Color(0xFF4CAF50)
-        "Summer" -> Color(0xFFFFC107)
-        "Autumn" -> Color(0xFFFF9800)
-        "Winter" -> Color(0xFF2196F3)
-        else     -> AmbientTheme.palette.accentHigh
-    }
-    Box(modifier = modifier.background(color.copy(alpha = 0.18f))) {
-        Text(
-            text = season.uppercase(),
-            style = ResponsiveTypography.t3.copy(letterSpacing = 0.5.sp),
-            color = color,
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-        )
-    }
-}
+// This was used by the old Masthead, keeping for reference if needed elsewhere or removing
+// private fun SeasonChip...
 
 private fun getCurrentSeason(): String {
     val today = LocalDate.now()

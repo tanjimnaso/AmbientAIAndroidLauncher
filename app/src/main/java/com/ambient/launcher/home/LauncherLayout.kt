@@ -2,23 +2,24 @@ package com.ambient.launcher.home
 
 import android.graphics.drawable.Drawable
 import android.util.LruCache
+import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.runtime.produceState
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
-import coil3.compose.AsyncImage
-import coil3.request.ImageRequest
-import coil3.request.crossfade
+import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 
@@ -29,21 +30,59 @@ internal data class AppInfo(
     val firstInstallTime: Long = 0L
 )
 
+private object IconCache {
+    val cache = LruCache<String, ImageBitmap>(150)
+}
+
+@Composable
+fun rememberAppIcon(packageName: String): ImageBitmap? {
+    val context = LocalContext.current
+    
+    // By using remember(packageName), we ensure that when the app changes,
+    // we immediately check the cache and reset the state, preventing "ghost" icons.
+    var state by remember(packageName) { 
+        mutableStateOf<ImageBitmap?>(IconCache.cache.get(packageName)) 
+    }
+    
+    LaunchedEffect(packageName) {
+        if (state == null) {
+            val bitmap = withContext(Dispatchers.IO) {
+                try {
+                    val drawable = context.packageManager.getApplicationIcon(packageName)
+                    val bmp = drawable.toBitmap().asImageBitmap()
+                    IconCache.cache.put(packageName, bmp)
+                    bmp
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            state = bitmap
+        }
+    }
+    
+    return state
+}
+
 @Composable
 fun AppIcon(
     packageName: String,
     modifier: Modifier = Modifier,
     colorFilter: ColorFilter? = null
 ) {
-    val context = LocalContext.current
-    AsyncImage(
-        model = ImageRequest.Builder(context)
-            .data("android.resource://$packageName") // Coil handles package icons via this scheme
-            .build(),
-        contentDescription = null,
-        modifier = modifier,
-        colorFilter = colorFilter
-    )
+    val icon = rememberAppIcon(packageName)
+    
+    Box(modifier = modifier) {
+        Crossfade(targetState = icon, label = "icon-fade") { state ->
+            if (state != null) {
+                Image(
+                    bitmap = state,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    colorFilter = colorFilter
+                )
+            }
+        }
+    }
 }
 
 /** Icon filter: tint opacity varies by light mode for visibility. */
@@ -54,7 +93,31 @@ internal fun getAmbientIconFilter(bucketColor: Color): ColorFilter {
 }
 
 internal fun getAmbientIconFilterNonComposable(bucketColor: Color, opacity: Float): ColorFilter {
-    return ColorFilter.tint(bucketColor.copy(alpha = opacity), BlendMode.SrcAtop)
+    // To achieve the Japandi "Ink" effect, we need to:
+    // 1. Completely desaturate the icon (convert to grayscale).
+    // 2. Tint it with the bucket's thematic color.
+    // 3. Modulate the alpha so it feels like it's printed on the surface.
+    
+    val matrix = ColorMatrix().apply {
+        setToSaturation(0f) // Grayscale
+        
+        // Adjust the matrix to apply the tint color. 
+        // We multiply the grayscale values by the tint color components.
+        val r = bucketColor.red
+        val g = bucketColor.green
+        val b = bucketColor.blue
+        val a = opacity.coerceAtLeast(0.5f) // Stronger presence in dark modes
+        
+        val m = floatArrayOf(
+            r, 0f, 0f, 0f, 0f,
+            0f, g, 0f, 0f, 0f,
+            0f, 0f, b, 0f, 0f,
+            0f, 0f, 0f, a, 0f
+        )
+        timesAssign(ColorMatrix(m))
+    }
+    
+    return ColorFilter.colorMatrix(matrix)
 }
 
 /**

@@ -1,38 +1,47 @@
-# Codex & AI Agent Instructions
+# AI Agent Instructions
 
-If you are an AI assistant, Codex, or an LLM modifying this codebase, **read this first**.
+If you are an AI assistant modifying this codebase, **read this first**.
 
 ## Context
-This is an Android 16 Launcher built in Kotlin and Jetpack Compose.
-The goal is to create a calm, ambient launcher with an editorial "Windows Phone-like" flat tile layout, removing the noisy card-in-card conventions typical of Android. 
+This is an Android 16 Launcher built in Kotlin + Jetpack Compose. The goal is a **calm, ambient launcher** — editorial layout, hairline typography, slow motion, lux-aware palettes, asymmetric main page. Not a grid launcher. See [ART_DIRECTION.md](ART_DIRECTION.md) for the visual system and [ARCHITECTURE.md](ARCHITECTURE.md) for the code layout.
 
 ## Golden Rules
-1. **Never load app icons synchronously or in bulk on startup.** 
-   - `PackageManager.loadIcon()` is extremely heavy. Keep `AppInfo` as a lightweight data class containing only the `packageName` and `label`. 
-   - Use `rememberAppIcon(packageName)` at the Compose leaf node when the icon actually needs to be drawn.
 
-2. **No "Cards Within Cards".**
-   - The home layout uses a flat grid (FlowRow) of app tiles sitting directly on the `WallpaperBackplane`. 
-   - Do not wrap sections in `Surface` components with heavy paddings.
-   - Do not add text headers to home sections. Visual grouping is achieved by spacing alone on the home page. The left "Industrial Index" page handles textual context.
+1. **Never load app icons synchronously or in bulk on startup.**
+   - `PackageManager.loadIcon()` is heavy. Keep `AppInfo` lightweight — `packageName` + `label` only.
+   - Use `rememberAppIcon(packageName)` at the leaf Compose node that actually draws the icon. Icons are cached in a 150-entry `LruCache` loaded on `Dispatchers.IO`.
 
-3. **Avoid Compose State Thrashing.**
-   - Do not use `derivedStateOf` to iterate over 100+ installed apps during every scroll or drag event. 
-   - Pre-compute bucket/app assignments in `remember` blocks tied to `configuration` changes, or push it down to a ViewModel.
+2. **No "cards within cards."**
+   - Home and News pages draw directly on the ambient background. No nested `Surface` wrappers. No drop shadows.
+   - Visual grouping is done with spacing and colour, not enclosure.
 
-4. **Location & Weather Handling.**
-   - On Android 11+ (API 30+), `getLastKnownLocation` often silently returns `null` if no other app is actively pulling location. Use `LocationManager.getCurrentLocation` with a `CancellationSignal` inside a suspend coroutine to reliably fetch the weather.
+3. **Avoid Compose state thrashing.**
+   - Do not use `derivedStateOf` to iterate over 100+ installed apps on scroll/drag events.
+   - Pre-compute bucket assignments in `remember` blocks tied to config keys, or push the work into a ViewModel.
 
-5. **Theming & Colors.**
-   - Do not introduce raw hex colors (e.g., `Color(0xFF...)`) into UI files. 
-   - Only use `AmbientTheme.palette` surfaces (`panel`, `elevatedPanel`, `searchPanel`, `chipBackground`).
+4. **Location & Weather.**
+   - On Android 11+, `getLastKnownLocation` often returns `null`. Use `LocationManager.getCurrentLocation` with a `CancellationSignal` inside a suspend coroutine. See `WeatherRepository`.
 
-6. **Time Horizon Dashboard.**
-   - The timelines use vertical leader lines for labels.
-   - Do not use diagonal lines or overlapping text; use staggered vertical offsets or multi-line wrapping if needed.
-   - The entire timeline area is a unified interactive target that triggers the "Forecast Observation Deck" (Slide-out Panel).
+5. **Theming & colours.**
+   - Do not introduce raw hex colours (`Color(0xFF...)`) into UI files. Only use `AmbientTheme.palette` surfaces.
+   - When adding new colour roles, add them to `AmbientPalette` in [Theme.kt](app/src/main/java/com/ambient/launcher/ui/theme/Theme.kt) first — define for all four palettes.
 
-## Making Changes
-- Always review `todo.md` and `REQUIREMENTS.md` before attempting a refactor.
-- If testing `SharedPreferences` defaults or seeding configuration logic (`LauncherConfigStore`), always use `adb shell pm clear com.ambient.launcher` to ensure a clean slate, otherwise your logic may not trigger.
-- Keep the `MainActivity.kt` extremely thin. Put Compose logic in `LauncherScreen.kt` and UI widgets in `LauncherCards.kt`.
+6. **Motion discipline.**
+   - Reveals: 200ms in / 400ms out tween. Palette transitions: 1000ms. NowMoment: 800ms crossfade.
+   - No springs on primary surfaces. Nothing snaps. See [ART_DIRECTION.md](ART_DIRECTION.md).
+
+7. **Ambient reveal pattern.**
+   - Secondary chrome (masthead sub-line, notes toolbar) hides at low alpha or unmounts, and reveals on non-consuming tap via `PointerEventPass.Initial`.
+   - When using `AnimatedVisibility` for reveal, prefer unmounting over `graphicsLayer { alpha = ... }` so invisible buttons can't capture taps.
+
+## Before You Change Anything
+
+- Read [REQUIREMENTS.md](REQUIREMENTS.md) for scope boundaries.
+- Check [BEST_PRACTICES.md](BEST_PRACTICES.md) for Compose conventions.
+- Keep [MainActivity.kt](app/src/main/java/com/ambient/launcher/MainActivity.kt) thin. Compose logic lives in `home/LauncherScreen.kt`.
+
+## Testing Config Changes
+Seeding logic (`LauncherConfig` defaults) only runs on first install. When iterating on defaults:
+```bash
+adb shell pm clear com.ambient.launcher
+```

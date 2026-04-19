@@ -1,11 +1,7 @@
 package com.ambient.launcher.home
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -27,19 +23,14 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ambient.launcher.*
 import com.ambient.launcher.ui.theme.AmbientTheme
 import com.ambient.launcher.ui.theme.AmbientMode
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 
 // Packages excluded from the home-screen quick-app list
 private val BLOCKED_QUICK_APP_PACKAGES = setOf(
@@ -96,7 +87,6 @@ internal fun LauncherScreen(
     val feedItems          by dashboardViewModel.feedItems.collectAsStateWithLifecycle()
     val lastFeedRefreshTime by dashboardViewModel.lastFeedRefreshTime.collectAsStateWithLifecycle()
     val isFeedRefreshing   by dashboardViewModel.isRefreshing.collectAsStateWithLifecycle()
-    val weather            by dashboardViewModel.weather.collectAsStateWithLifecycle()
     val battery            by dashboardViewModel.batteryState.collectAsStateWithLifecycle()
     val briefing           by briefingViewModel.briefing.collectAsStateWithLifecycle()
     val analysis           by briefingViewModel.analysis.collectAsStateWithLifecycle()
@@ -116,10 +106,6 @@ internal fun LauncherScreen(
 
     val (configuration, updateConfiguration) = rememberLauncherConfiguration(installedApps)
 
-    val requestLocationPermission = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted -> if (granted) dashboardViewModel.refreshWeather() }
-
     // ── Side effects ──────────────────────────────────────────────────────────
     LaunchedEffect(ambientPalette.mainBackground) {
         WallpaperHelper.setSolidColorWallpaper(context, ambientPalette.mainBackground)
@@ -131,19 +117,6 @@ internal fun LauncherScreen(
         if (feedItems.isNotEmpty()) {
             // 30 headlines is sufficient signal for a one-liner briefing — no need to send all 66+
             briefingViewModel.generateBriefing(feedItems.take(30).map { "${it.source}: ${it.title}" })
-        }
-    }
-    LaunchedEffect(Unit) {
-        val hasLocation = ContextCompat.checkSelfPermission(
-            context, Manifest.permission.ACCESS_COARSE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-        if (hasLocation) {
-            while (isActive) {
-                dashboardViewModel.refreshWeather()
-                delay(30 * 60 * 1000L)
-            }
-        } else {
-            requestLocationPermission.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
         }
     }
 
@@ -170,9 +143,15 @@ internal fun LauncherScreen(
             .filter { it.firstInstallTime > sevenDaysAgo && it.packageName !in NEVER_SHOW_PACKAGES }
             .sortedBy { it.label.lowercase() }
     }
-    val allApps = remember(installedApps) {
+    val allApps = remember(installedApps, configuration) {
         installedApps
             .filter { it.packageName !in NEVER_SHOW_PACKAGES }
+            .map { app ->
+                val bucket = LauncherBucket.entries
+                    .find { configuration.packagesFor(it).contains(app.packageName) }
+                    ?: LauncherBucket.MISC
+                app.copy(bucket = bucket)
+            }
             .sortedBy { it.label.lowercase() }
     }
 
@@ -219,9 +198,77 @@ internal fun LauncherScreen(
         }
     }
 
+    // Ambient reveal: on the main page the masthead rests at a low alpha so the
+    // eye isn't constantly pulled to it. A tap anywhere pulses it to full for
+    // 3 seconds, then it fades back. On the news page it stays fully visible.
+    var mastheadRevealed by remember { mutableStateOf(false) }
+    val onMainPage by remember(pagerState) {
+        derivedStateOf { mastheadFullness > 0.8f }
+    }
+    val ambientMastheadAlpha by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = when {
+            !onMainPage -> 1f
+            mastheadRevealed -> 1f
+            else -> 0.30f
+        },
+        animationSpec = androidx.compose.animation.core.tween(
+            durationMillis = if (mastheadRevealed) 200 else 400
+        ),
+        label = "masthead-ambient-reveal"
+    )
+    LaunchedEffect(mastheadRevealed) {
+        if (mastheadRevealed) {
+            delay(3000L)
+            mastheadRevealed = false
+        }
+    }
+
+    // Idle blackout: 10s after the chrome recedes on the main page, the palette
+    // background drifts to true black over 3s. Any tap reverses it in 400ms.
+    // Skipped in DAYLIGHT_OUTDOOR — fading a white screen to black reads as a
+    // glitch, not as "settling into ambient mode."
+    val ambientMode = AmbientTheme.mode
+    val shouldBlackout by remember(mastheadRevealed, onMainPage, ambientMode) {
+        derivedStateOf {
+            onMainPage &&
+                !mastheadRevealed &&
+                ambientMode != AmbientMode.DAYLIGHT_OUTDOOR
+        }
+    }
+    var idleElapsed by remember { mutableStateOf(false) }
+    LaunchedEffect(shouldBlackout) {
+        idleElapsed = false
+        if (shouldBlackout) {
+            delay(10_000L)
+            idleElapsed = true
+        }
+    }
+    val idleBlackout by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (idleElapsed) 1f else 0f,
+        animationSpec = androidx.compose.animation.core.tween(
+            durationMillis = if (idleElapsed) 3000 else 400
+        ),
+        label = "idle-blackout"
+    )
+
     // ── Root layout ───────────────────────────────────────────────────────────
-    Box(modifier = Modifier.fillMaxSize()) {
-        WallpaperBackplane()
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            // Peek taps in the Initial pass — triggers the reveal without
+            // consuming the event, so app-icon launches still work.
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                        if (event.type == androidx.compose.ui.input.pointer.PointerEventType.Press && onMainPage) {
+                            mastheadRevealed = true
+                        }
+                    }
+                }
+            }
+    ) {
+        WallpaperBackplane(idleBlackout = idleBlackout)
 
         val scope = rememberCoroutineScope()
 
@@ -234,7 +281,7 @@ internal fun LauncherScreen(
             when (page) {
                 // ── Page 0: News / RSS / AI summary ──────────────────────────
                 0 -> LeftNewsPage(
-                    topPadding           = mastheadHeightDp,
+                    topPadding           = 90.dp,
                     briefing             = briefing,
                     isBriefingLoading    = isBriefingLoading,
                     briefingHasError     = briefingHasError,
@@ -280,17 +327,19 @@ internal fun LauncherScreen(
                 // ── Page 1: Home apps (default) ───────────────────────────────
                 1 -> MiddleHomeScreen(
                     topApps       = topApps,
+                    allApps       = allApps,
                     appsByPackage = appsByPackage,
-                    topPadding    = mastheadHeightDp,
-                    topHeadline   = feedItems.firstOrNull()?.title,
-                    weather       = weather,
+                    topPadding    = 140.dp,
+                    topHeadline   = feedItems.firstOrNull(),
+                    onHeadlineClick = { uiState.viewingArticle = it },
                     onAppClick    = { app ->
                         context.packageManager.getLaunchIntentForPackage(app.packageName)?.let {
                             it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             context.startActivity(it)
                         }
                     },
-                    onSwipeUp     = { uiState.showAppMenu = true }
+                    onSwipeUp     = { uiState.showAppMenu = true },
+                    ambientAlpha  = ambientMastheadAlpha
                 )
 
                 // ── Page 2: S Pen notes ───────────────────────────────────────
@@ -300,7 +349,7 @@ internal fun LauncherScreen(
 
         // Wabi-sabi grain — drawn above pager content, below masthead and overlays.
         // Subtle (~4% alpha) texture that combats OLED moire at oblique viewing angles.
-        com.ambient.launcher.ui.theme.GrainOverlay()
+        com.ambient.launcher.ui.theme.GrainOverlay(idleBlackout = idleBlackout)
 
         // ── Floating masthead — shared across pages 0 & 1, fades before page 2 ─
         // Rendered above the pager so it doesn't move during horizontal swipes.
@@ -308,12 +357,11 @@ internal fun LauncherScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .height(140.dp) // Pinned height to prevent layout jumps during swipe
                 .align(Alignment.TopStart)
-                .onSizeChanged { mastheadHeightPx = it.height }
-                .alpha(mastheadAlpha)
+                .alpha(mastheadAlpha * ambientMastheadAlpha)
         ) {
             Masthead(
-                weather  = weather,
                 battery  = battery,
                 modifier = Modifier.fillMaxWidth(),
                 fullness = mastheadFullness
@@ -455,12 +503,17 @@ private fun LeftNewsPage(
 // ── Wallpaper backplane ───────────────────────────────────────────────────────
 
 @Composable
-private fun WallpaperBackplane() {
+private fun WallpaperBackplane(idleBlackout: Float = 0f) {
     val ambientPalette = AmbientTheme.palette
+    val bgColor = androidx.compose.ui.graphics.lerp(
+        ambientPalette.mainBackground,
+        Color.Black,
+        idleBlackout.coerceIn(0f, 1f)
+    )
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(ambientPalette.mainBackground)
+            .background(bgColor)
     )
 }
 

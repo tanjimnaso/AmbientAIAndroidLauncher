@@ -112,22 +112,22 @@ private val DayInteriorHiPalette = AmbientPalette(
 )
 
 private val TwilightPalette = AmbientPalette(
-    isDark = false,
-    mainBackground = Color(0xFFE8C896),  // Honeyed parchment (less saturated than current)
-    panel          = Color(0xFFF4E2C4),  // Warm cream
-    elevatedPanel  = Color(0xFFEACBA0),  // Toasted oat
-    accentHigh     = Color(0xFF7C3F1D),  // Burnt sienna
-    textPrimary    = Color(0xFF2E1A0B),  // Deep cocoa (NOT black)
-    textSecondary  = Color(0xFF6B4423),  // Walnut
-    tileBackground = Color(0xFFFAEED6),  // Pale parchment
-    errorAccent    = Color(0xFF8B2E1F),  // Rust red
-    inkColor       = Color(0xFF3A1F0D),
-    clusterIntelligence  = Color(0xFF1F4E79),  // Inkwell blue
-    clusterUtility       = Color(0xFF3D6B2E),  // Olive
-    clusterCommunication = Color(0xFF1F4E79),
-    clusterAssistant     = Color(0xFF6B3A7A),  // Aged plum
-    clusterHealth        = Color(0xFF8B2E1F),
-    iconOverlayOpacity = 0.40f
+    isDark = true,
+    mainBackground = Color(0xFF2B1710),  // Deep burnt umber (twilight earth)
+    panel          = Color(0xFF3A2218),  // Lifted warm brown
+    elevatedPanel  = Color(0xFF48291D),  // Toasted cocoa
+    accentHigh     = Color(0xFFE8A066),  // Warm sienna-amber (lifted for dark)
+    textPrimary    = Color(0xFFC2B299),  // Dimmed warm cream (was 0xFFF4E2C4)
+    textSecondary  = Color(0xFF8C7A5E),  // Muted honey (was 0xFFBFA077)
+    tileBackground = Color(0xFF3E2519),  // Just above panel
+    errorAccent    = Color(0xFFD86B5A),  // Lifted rust
+    inkColor       = Color(0xFFC2B299),  // Matches textPrimary
+    clusterIntelligence  = Color(0xFF8AB0D9),  // Lifted inkwell blue
+    clusterUtility       = Color(0xFF9FC088),  // Lifted olive
+    clusterCommunication = Color(0xFF8AB0D9),
+    clusterAssistant     = Color(0xFFC79FD1),  // Lifted aged plum
+    clusterHealth        = Color(0xFFD88676),  // Lifted rust
+    iconOverlayOpacity = 0.30f
 )
 
 private val DuskPalette = AmbientPalette(
@@ -343,6 +343,7 @@ private object LuxConfig {
     const val OUTDOOR_THRESHOLD = 2500f  // Actual sunlight/bright window
     const val OFFICE_THRESHOLD  = 500f   // Well-lit workspace
     const val DIM_THRESHOLD     = 80f    // Moody interior/evening lamps
+    const val TWILIGHT_THRESHOLD = 10f   // Deep evening / bedside light
     
     // Hysteresis buffer to prevent bouncing at the edges
     const val HYSTERESIS = 0.15f 
@@ -355,6 +356,9 @@ private fun resolveAmbientMode(time: LocalTime, lux: Float, current: AmbientMode
 
     // 1. High-Lux Sunlight (always takes priority)
     if (lux > LuxConfig.OUTDOOR_THRESHOLD) return AmbientMode.DAYLIGHT_OUTDOOR
+    
+    // 2. Ultra-low light (force Twilight regardless of time)
+    if (lux < LuxConfig.TWILIGHT_THRESHOLD) return AmbientMode.TWILIGHT
 
     val isDay      = !time.isBefore(dayStart) && time.isBefore(duskStart)
     val isDusk     = !time.isBefore(duskStart) && time.isBefore(twilightStart)

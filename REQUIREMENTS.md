@@ -1,111 +1,126 @@
-# Project Requirements
+# Requirements
 
-## Functional Requirements
+## Scope
 
-### 1. Launcher Fundamentals
-- Register as an Android Home launcher.
-- Provide a full-screen library overlay for launching apps.
-- **Ambient Focus:** Launcher as a "Personal Intent OS" rather than a utility grid. Prioritize reducing interaction friction and cognitive load.
-
-### 2. Home System
-- Main home page must be vertically scrollable.
-- Home page must be composed as a vertical editorial stack:
-  header → project cards → calendar rail → app tile grid → action cards (Wallet, Battery) → note input.
-- Home app grids must have **no section headers** to reduce visual noise.
-- Home app sections render as a flat grid of tiles floating directly over the ambient background.
-- App tiles use a **6-column internal grid** supporting three sizes:
-  - `SMALL` (1 col span, 0.5×0.5 of regular) — grouped only, always in 2×2 blocks
-  - `REGULAR` (2 col span, 1×1 baseline)
-  - `WIDE` (4 col span, 2×1 — twice as wide, same height as regular)
-- Default tile size is determined by the app's value score:
-  - Score 8–10 → WIDE
-  - Score 6–7 → REGULAR
-  - Score < 6 → does not appear on home
-- User may override any tile's size via long-press → size picker.
-- Home should display approximately **15–20 apps maximum**, not the full assigned inventory.
-- The rest of the assigned apps remain available in the industrial index / app menu.
-
-#### The Focused 12 & News Triage
-- **Focused 12:** Limit home screen app density to high-intent applications.
-- **News Triage Strip:** Consolidate secondary/obligatory news sources (AP, Reuters, Ground) into a single shared "Triage Strip" to minimize screen real estate and reduce passive consumption.
-- **Direct Manipulation:** Integrate "Clipboard Drop-Zone" next to the Gemini pill for instant screenshot sharing to development environments.
-
-#### Home vs App Menu
-- Each app is either **home-visible** or **app-menu-only**, independently of its bucket.
-- Value scoring determines the default `isOnHome` state at first-boot seeding.
-- User overrides persist across restarts.
-
-#### Known home-visible apps (reference):
-| Bucket | Home | App Menu Only |
-|---|---|---|
-| News | X | AP News, FT, Ground News, Reuters |
-| Browsers | Brave, Chrome | — |
-| AI | Claude, ChatGPT, Gemini, Consultant | Grok, Perplexity, Kimi, AI Studio |
-| Social | Messenger, WhatsApp, Photos | — |
-| Health | Strava, Training, Nike Run Club, Medicare | Runna, MedAdvisor, MyFitnessPal, Cyclers |
-| Security | CommBank, ING Banking | Authenticator ×2, myID, Service NSW |
-| Utilities | Phone, Messages, Gmail, Maps, TripView, Notes | Amazon, Skymee → unassigned |
-
-### 3. App Value Scoring
-- On first boot (or when "Re-score" is triggered), each installed app is scored automatically
-  using a keyword/package-name heuristic (`AppValueScorer`).
-- Score = REACH × FREQUENCY, both on a 1–3 scale. Threshold for home placement = 6.
-- Score determines default: `isOnHome`, tile size, and bucket assignment suggestion.
-- `PACKAGE_USAGE_STATS` permission may be requested optionally to improve accuracy.
-  If granted, real open-frequency data replaces the heuristic frequency estimate.
-- User overrides (bucket, home visibility, tile size) always win over computed scores.
-
-### 4. Secondary Navigation
-- Swiping left from home reveals an industrial text-led index page.
-- Index page exposes section jumps, app assignment/editing, and a settings entry point.
-- No persistent bottom apps bar.
-- Index section heading uses type-bleed to signal swipeability (partially visible adjacent
-  section title at the right screen edge).
-
-### 5. Ambient Features
-- Live weather in the home header (Open-Meteo, location-based).
-- RSS project card with curated sources and local cache.
-- Battery action card: shows `{pct}%` as title and `{h}h {m}m` (or "charging") as subtitle.
-  - Total estimated discharge: 29h 35m (29.583h) at 100%.
-  - Countdown resets when charger is removed: `remainingHours = 29.583 × (pct / resetPct)`.
-  - `resetPct` = percentage at the moment the charger was disconnected.
-  - Battery monitoring via `BroadcastReceiver` registered in `DashboardViewModel`, not inline
-    in composables.
-  - **Interaction:** Tapping the battery readout opens the system's Battery Usage Summary screen.
-- Wallet action card: taps through to Google Wallet or the primary wallet app.
-- Both action cards are `aspectRatio(2f/3f)` — 50% taller than wide.
-- Time-based theme switching: EARLY_MORNING (5–7:30), DAY (7:30–17:30),
-  BLUE_HOUR (17:30–20:00), LATE_NIGHT (20:00–5:00).
-- System wallpaper as base visual layer (`windowShowWallpaper=true`).
-
-### 6. Forecasting & Time Horizon
-- **Life & Forecast Timeline:** Visualize the user's life arc (birth to expected life years) integrated with global technological forecasts (AGI, Singularity).
-- **Universal Scale:** A secondary timeline contextualizing the human era within the cosmic scale (Big Bang to Heat Death).
-- **Forecast Observation Deck:** An interactive slide-out panel accessible by tapping the timelines.
-  - Aggregates probabilistic data from Metaculus (Community Predictions) and Manifold (Market Odds).
-  - Provides AI-generated "Reality Sync" context, translating global forecasts into personal impact.
-- **Visual Presentation:** Use clean, vertical leader lines to associate labels with timeline points. Stagger labels and use multi-line text for high-density forecast clusters.
-
-### 7. Deferred Feature Areas
-- Social/message recents are deferred to a future pass.
-- Widget hosting is deferred to a future pass.
-- Launcher-native notes and Samsung Notes integration are deferred.
-- AI backend integrations beyond the current Gemini path are deferred.
-- Media now-playing strip is planned but deferred.
-- Static location map is planned but deferred.
+A single-user, offline-first Android launcher that replaces the system home app. Primary target: Samsung Galaxy S22 Ultra on Android 16. Secondary: any Android 14+ device.
 
 ---
 
-## Design Philosophy: HCI Principles for Ambient UI
-- **Bridging the Gulf of Execution:** Actions (weather, device control) must be live, card-based outcomes rather than app launches.
-- **Signifiers over Affordances:** Ensure tiles act as "Status Indicators" (e.g., showing unread counts or balances) rather than static icon buttons.
-- **Intent-Based Outcome Specification:** The Gemini Pill is the central control surface, capable of morphing from input to status-indicator based on system events (timers, workouts).
-- **Battery Efficiency:** No live blur, no unnecessary continuous rendering, minimal background work.
-- **Typography Consistency:** Use `Syne` for display (D1–D2) and `Inter` for body/labels (T1–T3) only.
-  Do not introduce a third typeface without updating the typography rules first.
-- **Performance:** Home scrolling, tile grid rendering, and library filtering must remain smooth.
-  No synchronous loading on the main thread (icons, network, battery reads).
-- **Config Persistence:** Bucket assignment, home visibility, tile size, section ordering, and
-  battery `resetPct` must survive app restarts via SharedPreferences (DataStore migration planned).
-- **Tile Visibility:** Dark mode tiles must be visually distinct from the wallpaper scrim.
-  Target contrast ≥ 2.2:1 between tile surface and scrim background.
+## Functional Requirements
+
+### Home surface
+- Must register as a launcher (`ACTION_MAIN` + `CATEGORY_HOME`) and survive reboots as the default.
+- Must present a 3-page horizontal pager: News ← Main → S-Pen Notes.
+- Must default to the Main page on every launch.
+- Must draw over the system wallpaper (`windowShowWallpaper=true`) with transparent composition.
+- Must restore pager position across orientation changes within a session, but reset to Main on cold start.
+
+### Masthead
+- Must show local time, temperature, weather summary, and battery hours-remaining.
+- Time must update every minute without redrawing the full launcher.
+- On the Main page, the secondary line (date/season/battery) sits at 30% opacity and reveals to 100% for 3 seconds on any screen tap, then fades.
+- On News and Notes pages, the secondary line is always fully visible.
+
+### News page
+- Must fetch 9 configured RSS sources in parallel with a 10-second per-source timeout.
+- Must filter sports, opinion columns, and clickbait using narrow keyword/regex blocklists (no ML).
+- Must drop items older than 48 hours or with unparseable dates.
+- Must collapse same-story duplicates via Jaccard title similarity ≥ 0.40.
+- Must cap per-source at 8 items and total feed at 30.
+- Must cache the feed to `SharedPreferences` and serve stale on network failure.
+- Must expose a single-sentence Gemini briefing above the feed.
+- Briefing tap must open a 5-part structured deep-dive prompt in the Gemini app, falling back to launch → browser search.
+
+### Main page
+- Must display a row of 4 user-pinned apps above-left and a contextual hero tile bottom-right.
+- Contextual hero must recompute every 5 minutes and pick the highest-used app matching the current time-of-day bucket preference.
+- Must display the "Now moment" line above the pinned row, rotating every 30 seconds between headline, weather, and deep-time glance.
+- Must support swipe-up to open the full app menu (15 buckets).
+- Must support long-press on any pinned app to edit bucket assignment, remove from home, or change tile size.
+
+### Notes page
+- Must provide a full-screen drawing canvas supporting pen and eraser.
+- Toolbar must auto-hide after 4 seconds of inactivity.
+- Top 80dp edge must serve as a tap target to re-reveal the toolbar.
+- Must support left-handed and right-handed toolbar positioning.
+
+### Article viewer
+- Must open in-app when any feed headline is tapped.
+- Must render a clean reading-mode view (no ads, nav, or chrome from the source).
+- Must provide TTS playback with sentence + word highlighting synced to speech.
+- Must expose a bottom media-control strip (play/pause, scrub, skip) while speaking.
+
+### Analysis screen
+- Must accept the current briefing sentence as input.
+- Must call `gemini-2.5-pro` and render five labeled sections: SYSTEMIC · HISTORICAL · PHILOSOPHY · ECONOMIC · FORECAST.
+- Must cache the last result for 24 hours.
+- Must support the same TTS playback affordances as the article viewer.
+
+### App menu
+- Must list all installed apps grouped into 15 user-editable buckets.
+- Must sort each bucket by 7-day usage frequency when `PACKAGE_USAGE_STATS` is granted, alphabetically otherwise.
+- Must persist bucket assignments, home visibility, and bucket ordering to `SharedPreferences`.
+
+### Ambient theming
+- Must select one of four palettes (DAYLIGHT_OUTDOOR, DAY_INTERIOR_HI, DUSK, TWILIGHT) automatically using lux sensor + local time.
+- Must animate palette transitions over 1000ms.
+- Must expose a monochrome "ink mode" toggle that collapses cluster hues to a single ink color while preserving the palette's background/text/accent.
+
+---
+
+## Non-Functional Requirements
+
+### Performance
+- Cold start to Main page: < 500ms on S22 Ultra.
+- Palette transitions must not drop frames on a 120Hz display.
+- Icon loading must use a `LruCache` of at least 150 entries, loaded on `Dispatchers.IO`.
+- No main-thread network I/O, no main-thread disk I/O beyond `SharedPreferences` reads.
+
+### Privacy
+- No user accounts. No cloud sync. No analytics. No telemetry.
+- Weather uses Open-Meteo with coarse location only (city-level grid).
+- Gemini API calls are stateless per-request and carry no user identifier.
+- All persistence is local to the device.
+
+### Resilience
+- Every network call must tolerate failure by serving cached content or gracefully hiding the affected section.
+- Malformed RSS dates must yield `epoch = 0L`, not `System.currentTimeMillis()`, so they can be filtered out of the freshness gate.
+- Missing Gemini API key must not crash the launcher; briefing and analysis sections must simply not render.
+
+### Accessibility
+- Minimum tap target: 48dp × 48dp.
+- All icon buttons must carry `contentDescription`.
+- TTS playback must be interruptible via standard media-button intents.
+
+---
+
+## Build Targets
+
+- **Kotlin:** 2.0+
+- **Android Gradle Plugin:** 9.1.0
+- **Gradle wrapper:** 9.3.1
+- **compileSdk / targetSdk:** 36
+- **minSdk:** 34 (Android 14)
+- **Compose BOM:** 2026.02.01
+
+## Permissions
+
+| Permission | Purpose | Required |
+|---|---|---|
+| `QUERY_ALL_PACKAGES` | Enumerate installed apps for the menu | Yes |
+| `POST_NOTIFICATIONS` | Future AOD-via-notification path | No |
+| `PACKAGE_USAGE_STATS` | Usage-based sort and contextual hero | Optional, graceful fallback |
+| `ACCESS_COARSE_LOCATION` | Weather grid lookup | Optional, weather hidden if denied |
+| `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | TTS playback service | Yes (for TTS feature) |
+
+---
+
+## Out of Scope
+
+The following are explicitly **not** planned:
+- Cloud sync, multi-device state
+- Android widget hosting (`AppWidgetHost`)
+- Calendar, email, or messaging integrations
+- Third-party theme marketplace
+- Tablet-optimised landscape layout
+- A settings screen with dozens of toggles — configuration is either automatic or a single long-press
