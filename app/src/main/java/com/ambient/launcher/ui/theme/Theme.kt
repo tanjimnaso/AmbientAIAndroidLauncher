@@ -1,11 +1,6 @@
 package com.ambient.launcher.ui.theme
 
 import android.app.Activity
-import android.content.Context
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -15,25 +10,21 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.produceState
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.delay
-import java.time.LocalTime
 
-// Ambient mode: pure lux + time-of-day automatic resolution
+// Ambient mode: time-of-day gates the window, lux refines day-hour split,
+// CameraLuxSampler disambiguates when the front lux sensor is suspect.
 enum class AmbientMode {
-    DAYLIGHT_OUTDOOR, DAY_INTERIOR_HI, DUSK, TWILIGHT
+    DAYLIGHT_OUTDOOR, DAY_INTERIOR_DIM, DUSK, TWILIGHT
 }
 
 data class AmbientPalette(
@@ -92,23 +83,27 @@ private val DaylightOutdoorPalette = AmbientPalette(
     iconOverlayOpacity = 0.0f
 )
 
-private val DayInteriorHiPalette = AmbientPalette(
+// Daytime-dim: used only within the day window when the room is genuinely dark
+// (dim office, basement, heavy cloud cover). Chromatically NEUTRAL — cool slate,
+// not warm — so it reads as "still daytime, just dim" rather than "sunset."
+// Warm palettes are reserved for DUSK/TWILIGHT.
+private val DayInteriorDimPalette = AmbientPalette(
     isDark = true,
-    mainBackground = Color(0xFF4B5158),  // Darker Slate Background
-    panel = Color(0xFF565D65),          // Lifted surface, darker slate
-    elevatedPanel = Color(0xFF636A73),  // Elevated slate
-    accentHigh = Color(0xFFCED4DA),     // Pale gray highlight (replaces ink-accent)
-    textPrimary = Color(0xFFF8F9FA),    // Off-white text
-    textSecondary = Color(0xFFDEE2E6),  // Muted light gray text
-    tileBackground = Color(0xFF565D65), // Matches panel
-    errorAccent = Color(0xFFE06C75),    // Softened red
-    inkColor = Color(0xFFF8F9FA),       // White/Off-white ink
-    clusterIntelligence = HueIntelligence.copy(alpha = 0.7f),
-    clusterUtility = HueUtility.copy(alpha = 0.7f),
-    clusterCommunication = HueCommunication.copy(alpha = 0.7f),
-    clusterAssistant = HueAssistant.copy(alpha = 0.7f),
-    clusterHealth = HueHealth.copy(alpha = 0.7f),
-    iconOverlayOpacity = 0.25f
+    mainBackground = Color(0xFF1F2328),  // Cool neutral near-black slate
+    panel          = Color(0xFF2A2F36),
+    elevatedPanel  = Color(0xFF353B44),
+    accentHigh     = Color(0xFFD4DBE3),  // Cool gray highlight
+    textPrimary    = Color(0xFFF5F7FA),  // Crisp bright near-white
+    textSecondary  = Color(0xFFB4B8BD),
+    tileBackground = Color(0xFF2A2F36),
+    errorAccent    = Color(0xFFE06C75),
+    inkColor       = Color(0xFFF5F7FA),
+    clusterIntelligence = HueIntelligence.copy(alpha = 0.75f),
+    clusterUtility = HueUtility.copy(alpha = 0.75f),
+    clusterCommunication = HueCommunication.copy(alpha = 0.75f),
+    clusterAssistant = HueAssistant.copy(alpha = 0.75f),
+    clusterHealth = HueHealth.copy(alpha = 0.75f),
+    iconOverlayOpacity = 0.20f
 )
 
 private val TwilightPalette = AmbientPalette(
@@ -201,7 +196,7 @@ fun AmbientLauncherTheme(content: @Composable () -> Unit) {
     val mode = rememberAmbientMode()
     val targetPalette = when(mode) {
         AmbientMode.DAYLIGHT_OUTDOOR -> DaylightOutdoorPalette
-        AmbientMode.DAY_INTERIOR_HI -> DayInteriorHiPalette
+        AmbientMode.DAY_INTERIOR_DIM -> DayInteriorDimPalette
         AmbientMode.DUSK -> DuskPalette
         AmbientMode.TWILIGHT -> TwilightPalette
     }
@@ -292,80 +287,13 @@ private fun AmbientPalette.toColorScheme(): ColorScheme = if (isDark) {
 @Composable
 private fun rememberAmbientMode(): AmbientMode {
     val context = LocalContext.current
-    val modeState = remember { mutableStateOf(resolveAmbientMode(LocalTime.now(), 100f, AmbientMode.DAY_INTERIOR_HI)) }
-    
-    DisposableEffect(context) {
-        val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        val lightSensor   = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
-        
-        val luxHistory = mutableListOf<Float>()
-        val maxHistory = 8 
-        
-        val listener = object : SensorEventListener {
-            override fun onSensorChanged(e: SensorEvent?) {
-                e?.values?.get(0)?.let { lux ->
-                    luxHistory.add(lux)
-                    if (luxHistory.size > maxHistory) luxHistory.removeAt(0)
-                    val smoothedLux = luxHistory.average().toFloat()
-                    
-                    val next = resolveAmbientMode(LocalTime.now(), smoothedLux, modeState.value)
-                    if (next != modeState.value) {
-                        modeState.value = next
-                    }
-                }
-            }
-            override fun onAccuracyChanged(s: Sensor?, a: Int) {}
-        }
+    val signals = remember(context) { LightingSignals(context.applicationContext) }
 
-        if (lightSensor != null) {
-            sensorManager.registerListener(listener, lightSensor, SensorManager.SENSOR_DELAY_UI)
-        }
-
-        onDispose {
-            sensorManager.unregisterListener(listener)
-        }
+    DisposableEffect(signals) {
+        signals.start()
+        onDispose { signals.stop() }
     }
 
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(15_000) // Periodic time-of-day check
-            val next = resolveAmbientMode(LocalTime.now(), 100f, modeState.value)
-            if (next != modeState.value) {
-                modeState.value = next
-            }
-        }
-    }
-
-    return modeState.value
-}
-
-private object LuxConfig {
-    const val OUTDOOR_THRESHOLD = 2500f  // Actual sunlight/bright window
-    const val OFFICE_THRESHOLD  = 500f   // Well-lit workspace
-    const val DIM_THRESHOLD     = 80f    // Moody interior/evening lamps
-    const val TWILIGHT_THRESHOLD = 10f   // Deep evening / bedside light
-    
-    // Hysteresis buffer to prevent bouncing at the edges
-    const val HYSTERESIS = 0.15f 
-}
-
-private fun resolveAmbientMode(time: LocalTime, lux: Float, current: AmbientMode): AmbientMode {
-    val dayStart      = LocalTime.of(6, 30)
-    val duskStart     = LocalTime.of(16, 30)
-    val twilightStart = LocalTime.of(18, 30)
-
-    // 1. High-Lux Sunlight (always takes priority)
-    if (lux > LuxConfig.OUTDOOR_THRESHOLD) return AmbientMode.DAYLIGHT_OUTDOOR
-    
-    // 2. Ultra-low light (force Twilight regardless of time)
-    if (lux < LuxConfig.TWILIGHT_THRESHOLD) return AmbientMode.TWILIGHT
-
-    val isDay      = !time.isBefore(dayStart) && time.isBefore(duskStart)
-    val isDusk     = !time.isBefore(duskStart) && time.isBefore(twilightStart)
-
-    return when {
-        isDay -> AmbientMode.DAY_INTERIOR_HI
-        isDusk -> AmbientMode.DUSK
-        else -> AmbientMode.TWILIGHT
-    }
+    val mode by signals.mode.collectAsStateWithLifecycle()
+    return mode
 }

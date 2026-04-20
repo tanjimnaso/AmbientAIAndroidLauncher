@@ -6,12 +6,12 @@ The launcher is designed to be **quiet, literate, and slightly analogue** — cl
 
 ## Four Ambient Modes
 
-Palettes switch automatically based on a combination of **ambient light (lux sensor)** and **local time**. High-lux sunlight always takes priority; below that, time-of-day decides.
+Palettes switch automatically based on a combination of **local time (primary)** and **ambient light (secondary refinement)**. The clock gates the palette window; lux only decides `DAYLIGHT_OUTDOOR` vs `DAY_INTERIOR_DIM` within the day window. Dusk and twilight windows ignore lux entirely. See `LightingSignals.kt` for the full fusion pipeline.
 
 | Mode | Condition | Character |
 |---|---|---|
-| `DAYLIGHT_OUTDOOR` | lux > 2500 | Bright white background, charcoal text, high-chroma cluster hues. Readable in direct sun. |
-| `DAY_INTERIOR_HI` | 06:30–16:30, moderate lux | Darker slate background, off-white text, softened hues at 70% alpha. Warm-office feel. |
+| `DAYLIGHT_OUTDOOR` | 06:30–16:30, lux ≥ 800 (default) | Bright white background, charcoal text, high-chroma cluster hues. Readable in direct sun. |
+| `DAY_INTERIOR_DIM` | 06:30–16:30, lux ≤ 250 | Cool neutral slate background, crisp bright text, softened hues at 75% alpha. Dim office / heavy overcast / basement. Chromatically *neutral* (not warm) so it reads as "still daytime" rather than sunset. |
 | `DUSK` | 16:30–18:30 | Dusty plum-smoke background, muted iris accent, soft lavender-white text. |
 | `TWILIGHT` | 18:30–06:30 | Deep burnt umber background, warm cream text, sienna-amber accent. Candle-warm. |
 
@@ -27,7 +27,7 @@ Palette transitions are animated over **1000ms** via `animateColorAsState` so th
 | Assistant | Launcher, shell | `#8B5CF6` violet |
 | Health | Safety, errors | `#DC2626` red |
 
-Each palette either uses these directly (DaylightOutdoor), pulls them to 70% alpha (DayInteriorHi), or substitutes muted versions tuned to the background (Dusk, Twilight).
+Each palette either uses these directly (DaylightOutdoor), pulls them to 75% alpha (DayInteriorDim), or substitutes muted versions tuned to the background (Dusk, Twilight).
 
 ### Monochrome Ink Mode
 

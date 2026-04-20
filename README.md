@@ -38,9 +38,9 @@ The launcher uses a small set of deliberate techniques to stay visually quiet:
 
 - **Variant masthead with ambient reveal.** The time/date/weather header is drawn in two tiers. On the main page, the secondary line (date, season, battery hours) fades to 30% opacity until you tap the screen, then briefly pulses to full opacity for 3 seconds before receding again. Off the main page, it stays fully visible.
 - **Grain overlay.** A 4%-alpha tiled noise texture painted over the whole launcher using `PorterDuff.OVERLAY` blend. Preserves palette identity while breaking up OLED moire — a wabi-sabi texture rather than flat colour.
-- **Four time-of-day palettes**, auto-switching by local hour:
-  - `DAYLIGHT_OUTDOOR` — bright, cool
-  - `DAY_INTERIOR_HI` — warm, paper-like
+- **Four ambient palettes**, selected by clock + lux + motion-gated camera sample:
+  - `DAYLIGHT_OUTDOOR` — bright, cool (day, lux ≥ 800)
+  - `DAY_INTERIOR_DIM` — cool neutral slate, bright text (day, lux ≤ 250)
   - `DUSK` — slate and amber
   - `TWILIGHT` — deep burnt umber with warm cream text
 - **Monochrome ink toggle.** A single switch desaturates the entire launcher to black-on-paper, for reading-focused sessions.

@@ -63,6 +63,8 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/DEPENDENCIES"
+            excludes += "/META-INF/INDEX.LIST"
         }
     }
 }
@@ -114,6 +116,15 @@ dependencies {
 
     // MediaSessionCompat for TTS lockscreen transport controls
     implementation("androidx.media:media:1.7.0")
+
+    // Google Auth Library (for Vertex AI Service Account authentication)
+    implementation("com.google.auth:google-auth-library-oauth2-http:1.23.0")
+
+    // CameraX — one-shot ambient lux sampling when lux sensor is ambiguous
+    val cameraxVersion = "1.4.1"
+    implementation("androidx.camera:camera-core:$cameraxVersion")
+    implementation("androidx.camera:camera-camera2:$cameraxVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

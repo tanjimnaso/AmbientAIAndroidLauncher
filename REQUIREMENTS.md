@@ -62,7 +62,7 @@ A single-user, offline-first Android launcher that replaces the system home app.
 - Must persist bucket assignments, home visibility, and bucket ordering to `SharedPreferences`.
 
 ### Ambient theming
-- Must select one of four palettes (DAYLIGHT_OUTDOOR, DAY_INTERIOR_HI, DUSK, TWILIGHT) automatically using lux sensor + local time.
+- Must select one of four palettes (DAYLIGHT_OUTDOOR, DAY_INTERIOR_DIM, DUSK, TWILIGHT) automatically using local time (primary) + lux sensor (secondary) + motion-gated camera lux sample for disambiguation.
 - Must animate palette transitions over 1000ms.
 - Must expose a monochrome "ink mode" toggle that collapses cluster hues to a single ink color while preserving the palette's background/text/accent.
 

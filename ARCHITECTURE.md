@@ -124,14 +124,16 @@ val preferredBuckets = when (hour) {
 
 ### Four Ambient Modes
 
-`AmbientMode` enum with four palettes, auto-switched by local hour via `rememberAmbientMode()`:
+`AmbientMode` enum with four palettes, selected via `LightingSignals` fusion pipeline:
 
-| Mode | Hours | Character |
+| Mode | Window | Character |
 |---|---|---|
-| `DAYLIGHT_OUTDOOR` | 6–10 | bright, cool, high chroma text |
-| `DAY_INTERIOR_HI` | 11–16 | warm paper, muted |
-| `DUSK` | 17–20 | slate blue + amber |
-| `TWILIGHT` | 21–5 | deep burnt umber, warm cream text |
+| `DAYLIGHT_OUTDOOR` | 06:30–16:30, lux ≥ 800 | bright, cool, high chroma text |
+| `DAY_INTERIOR_DIM` | 06:30–16:30, lux ≤ 250 | cool neutral slate, crisp bright text |
+| `DUSK` | 16:30–18:30 | slate blue + amber |
+| `TWILIGHT` | 18:30–06:30 | deep burnt umber, warm cream text |
+
+**Signal fusion** (`LightingSignals.kt`): smoothed TYPE_LIGHT (8-sample avg) is primary. When the reading lands in the ambiguous zone (200–1500 lux) *and* TYPE_LINEAR_ACCELERATION indicates recent motion (> 0.15 m/s²), a single-frame rear-camera sample (`CameraLuxSampler`) is taken to disambiguate — motion-gated so sensor occlusion doesn't trigger it. Camera lux is derived from `TotalCaptureResult` exposure metadata (EV₁₀₀ photometry), not pixel luminance. Hysteresis: asymmetric enter/exit bands + 8s minimum dwell. Camera polls are debounced to ≥30s and require `android.permission.CAMERA` (optional — falls back to lux-only).
 
 Each palette defines `AmbientPalette(mainBackground, panel, elevatedPanel, accentHigh, textPrimary, textSecondary, tileBackground, errorAccent, inkColor, clusterIntelligence, clusterUtility, clusterCommunication, clusterAssistant, clusterHealth, iconOverlayOpacity)`.
 
