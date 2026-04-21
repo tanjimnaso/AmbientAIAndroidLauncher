@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -17,6 +18,8 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Velocity
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -44,6 +47,7 @@ import androidx.compose.material.icons.filled.StarBorder
 import com.ambient.launcher.BatteryUiState
 import com.ambient.launcher.RssFeedItem
 import com.ambient.launcher.ui.theme.AmbientTheme
+import com.ambient.launcher.ui.theme.sourceTint
 import com.ambient.launcher.ui.theme.InterFontFamily
 
 
@@ -218,11 +222,12 @@ internal fun AiBriefingSection(
     analysisHasError: Boolean = false,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
-    onOpenCloudNotifications: (() -> Unit)? = null
+    onOpenCloudNotifications: (() -> Unit)? = null,
+    onRefreshBriefing: (() -> Unit)? = null
 ) {
     val displayText = when {
-        !briefing.isNullOrBlank() -> briefing
         isBriefingLoading -> "Refreshing..."
+        !briefing.isNullOrBlank() -> briefing
         briefingHasError -> "ERROR: Briefing failed"
         else -> "No data"
     }
@@ -267,9 +272,16 @@ internal fun AiBriefingSection(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(end = 28.dp, top = 6.dp),
-            horizontalArrangement = Arrangement.End
+                .padding(horizontal = 28.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            Text(
+                text = "REFRESH BRIEFING",
+                style = ResponsiveTypography.t3,
+                color = AmbientTheme.palette.accentHigh.copy(alpha = 0.5f),
+                modifier = if (onRefreshBriefing != null) Modifier.clickable(onClick = onRefreshBriefing) else Modifier
+            )
+
             Text(
                 text = label,
                 style = ResponsiveTypography.t3,
@@ -290,63 +302,60 @@ internal fun HeadlinesSection(
     onToggleStar: (RssFeedItem) -> Unit,
     onDelete: (RssFeedItem) -> Unit,
     modifier: Modifier = Modifier,
-    onRefresh: (() -> Unit)? = null
+    listState: androidx.compose.foundation.lazy.LazyListState = rememberLazyListState(),
+    onRefresh: (() -> Unit)? = null,
+    headerContent: @Composable () -> Unit = {}
 ) {
     androidx.compose.material3.pulltorefresh.PullToRefreshBox(
         isRefreshing = isRefreshing,
         onRefresh = { onRefresh?.invoke() },
         modifier = modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            if (feedItems.isEmpty()) {
-                HeadlineItem(
-                    source = "",
-                    title  = "Aggregating latest intelligence...",
-                    onClick = null
-                )
-                TimestampFooter(lastRefreshTime)
-                return@Column
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .widthIn(max = 640.dp),
+            contentPadding = PaddingValues(vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            item {
+                headerContent()
             }
-
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .widthIn(max = 640.dp),
-                contentPadding = PaddingValues(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
+            if (feedItems.isEmpty()) {
+                item {
+                    HeadlineItem(
+                        source = "",
+                        title  = "Aggregating latest intelligence...",
+                        onClick = null
+                    )
+                }
+            } else {
                 items(feedItems, key = { it.url }) { item ->
-                    SwipeableHeadlineItem(
+                    PressableHeadlineItem(
                         item = item,
                         onFeedClick = onFeedClick,
                         onToggleStar = onToggleStar,
                         onDelete = onDelete
                     )
                 }
-                item { Spacer(Modifier.height(8.dp)) }
             }
-            TimestampFooter(lastRefreshTime)
+            item { Spacer(Modifier.height(8.dp)) }
+            item { TimestampFooter(lastRefreshTime) }
         }
     }
 }
 
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun SwipeableHeadlineItem(
+private fun PressableHeadlineItem(
     item: RssFeedItem,
     onFeedClick: (RssFeedItem) -> Unit,
     onToggleStar: (RssFeedItem) -> Unit,
     onDelete: (RssFeedItem) -> Unit
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
-    val swipeState = androidx.compose.material3.rememberSwipeToDismissBoxState(
-        confirmValueChange = {
-            if (it == androidx.compose.material3.SwipeToDismissBoxValue.EndToStart) {
-                showDeleteConfirm = true
-                false
-            } else false
-        }
-    )
+    var showContextMenu by remember { mutableStateOf(false) }
 
     if (showDeleteConfirm) {
         androidx.compose.material3.AlertDialog(
@@ -376,34 +385,45 @@ private fun SwipeableHeadlineItem(
         )
     }
 
-    androidx.compose.material3.SwipeToDismissBox(
-        state = swipeState,
-        backgroundContent = {
-            val alignment = Alignment.CenterEnd
-            val color = AmbientTheme.palette.errorAccent.copy(alpha = 0.2f)
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(color)
-                    .padding(horizontal = 28.dp),
-                contentAlignment = alignment
+    Box(contentAlignment = Alignment.Center) {
+        HeadlineItem(
+            source = item.source,
+            title = item.title,
+            publishedAtEpochMillis = item.publishedAtEpochMillis,
+            isStarred = item.isStarred,
+            onToggleStar = { onToggleStar(item) },
+            onClick = null,
+            modifier = Modifier
+                .background(AmbientTheme.palette.mainBackground)
+                .combinedClickable(
+                    onClick = { onFeedClick(item) },
+                    onLongClick = { showContextMenu = true }
+                )
+        )
+
+        // Centered anchor for the menu, offset slightly upwards ("above middle")
+        Box(Modifier.offset(y = (-16).dp)) {
+            androidx.compose.material3.DropdownMenu(
+                expanded = showContextMenu,
+                onDismissRequest = { showContextMenu = false },
+                modifier = Modifier.background(AmbientTheme.palette.panel)
             ) {
-                Text("DELETE", color = AmbientTheme.palette.errorAccent, style = ResponsiveTypography.t3)
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { 
+                        Text(
+                            "Delete Article", 
+                            style = ResponsiveTypography.t2,
+                            color = AmbientTheme.palette.errorAccent 
+                        ) 
+                    },
+                    onClick = {
+                        showContextMenu = false
+                        showDeleteConfirm = true
+                    }
+                )
             }
-        },
-        enableDismissFromStartToEnd = false,
-        content = {
-            HeadlineItem(
-                source = item.source,
-                title = item.title,
-                publishedAtEpochMillis = item.publishedAtEpochMillis,
-                isStarred = item.isStarred,
-                onToggleStar = { onToggleStar(item) },
-                onClick = { onFeedClick(item) },
-                modifier = Modifier.background(AmbientTheme.palette.mainBackground)
-            )
         }
-    )
+    }
 }
 
 @Composable
@@ -431,7 +451,7 @@ private fun HeadlineItem(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null
 ) {
-    val sourceColor = getSourceColor(source)
+    val sourceColor = AmbientTheme.palette.sourceTint(source)
     val elapsed = remember(publishedAtEpochMillis) { 
         if (publishedAtEpochMillis > 0L) formatElapsed(publishedAtEpochMillis) else "" 
     }
@@ -509,53 +529,6 @@ private fun HeadlineItem(
 }
 
 
-private fun getSourceColorNonComposable(source: String): Color {
-    return when {
-        // Tech & Science
-        source.contains("Daring Fireball", ignoreCase = true) -> Color(0xFF6B8CFF) // Electric Blue
-        source.contains("Ars Technica", ignoreCase = true) -> Color(0xFFFF6633)    // Rust
-        source.contains("Hacker News", ignoreCase = true) -> Color(0xFFFF6633)     // Rust
-        source.contains("Quanta", ignoreCase = true) -> Color(0xFF00A4EF)         // Cyan
-        source.contains("STAT", ignoreCase = true) -> Color(0xFFE06C75)            // Soft Red
-
-        // Culture, Ideas & Literature
-        source.contains("Arts & Letters Daily", ignoreCase = true) -> Color(0xFFD4AF37) // Muted Gold
-        source.contains("Noema", ignoreCase = true) -> Color(0xFF98C379)              // Sage Green
-        source.contains("3 Quarks", ignoreCase = true) -> Color(0xFFC678DD)           // Orchid
-        source.contains("Harper", ignoreCase = true) -> Color(0xFF56B6C2)             // Teal
-        source.contains("Marginalian", ignoreCase = true) -> Color(0xFFE5C07B)        // Warm Sand
-        source.contains("Marginal Revolution", ignoreCase = true) -> Color(0xFF98C379) // Sage
-
-        // Wire Services & Journalism
-        source.contains("BBC", ignoreCase = true) -> Color(0xFF6B8CFF)
-        source.contains("Guardian", ignoreCase = true) -> Color(0xFF999999)
-        source.contains("Reuters", ignoreCase = true) -> Color(0xFFFFA500)
-        source.contains("Associated Press", ignoreCase = true) -> Color(0xFF00A4EF)
-        source.contains("NPR", ignoreCase = true) -> Color(0xFFCC0000)
-        source.contains("Politico", ignoreCase = true) -> Color(0xFFE81B23)
-        
-        else -> Color.Unspecified
-    }
-}
-
-@Composable
-private fun getSourceColor(source: String): Color {
-    val raw = getSourceColorNonComposable(source)
-    if (raw == Color.Unspecified) return AmbientTheme.palette.textSecondary
-    
-    // For light backgrounds (Daylight/Twilight), we darken the source colors for contrast.
-    // For dark backgrounds (Interior/Dusk), we keep the vibrant variants.
-    return if (!AmbientTheme.palette.isDark) {
-        Color(
-            red = (raw.red * 0.75f).coerceIn(0f, 1f),
-            green = (raw.green * 0.75f).coerceIn(0f, 1f),
-            blue = (raw.blue * 0.75f).coerceIn(0f, 1f),
-            alpha = raw.alpha
-        )
-    } else {
-        raw
-    }
-}
 
 @Composable
 internal fun BentoTileGrid(

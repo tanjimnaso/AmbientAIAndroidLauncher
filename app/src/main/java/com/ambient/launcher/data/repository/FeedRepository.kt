@@ -39,42 +39,27 @@ internal class FeedRepository(private val context: Context) {
         "feeds.reuters.com" to ("Al Jazeera" to "https://www.aljazeera.com/xml/rss/all.xml")
     )
 
+    // Sources are no longer persisted to prefs. `defaultFeedSources` is the source of truth —
+    // edit the code list to manage feeds. The settings dialog may still call `saveSources` but
+    // its changes are session-scoped and reset on launch.
     fun getSources(): List<Pair<String, String>> {
+        // One-shot cleanup: drop the legacy rss_sources_v3 key if it's lingering.
         val prefs = context.getSharedPreferences("ambient_launcher_sections", Context.MODE_PRIVATE)
-        val json = prefs.getString("rss_sources_v3", null)
-        val currentSources = if (json != null) {
-            runCatching {
-                val array = JSONArray(json)
-                buildList {
-                    for (i in 0 until array.length()) {
-                        val obj = array.getJSONObject(i)
-                        add(obj.getString("name") to obj.getString("url").trim())
-                    }
-                }
-            }.getOrNull()
-        } else null
-
-        val finalSources = currentSources ?: defaultFeedSources.map { it.name to it.url }
-        
-        // Migrate dead feeds
-        val migrated = finalSources.map { (name, url) ->
-            val replacement = deadFeedReplacements.entries.find { url.contains(it.key) }
-            if (replacement != null) replacement.value else (name to url)
+        if (prefs.contains("rss_sources_v3")) {
+            prefs.edit().remove("rss_sources_v3").apply()
         }
-        
-        if (migrated != finalSources) {
-            saveSources(migrated)
-        }
-        
-        return migrated
+        return defaultFeedSources
+            .map { it.name to it.url }
+            .map { (name, url) ->
+                val replacement = deadFeedReplacements.entries.find { url.contains(it.key) }
+                replacement?.value ?: (name to url)
+            }
     }
 
-    fun saveSources(sources: List<Pair<String, String>>) {
-        val prefs = context.getSharedPreferences("ambient_launcher_sections", Context.MODE_PRIVATE)
-        val array = JSONArray()
-        sources.forEach { (n, u) -> array.put(JSONObject().put("name", n).put("url", u)) }
-        prefs.edit().putString("rss_sources_v3", array.toString()).apply()
-    }
+    // No-op: kept so the in-session dialog save path doesn't need to change shape.
+    // If persistent user customization is reintroduced, wire it back here.
+    @Suppress("UNUSED_PARAMETER")
+    fun saveSources(sources: List<Pair<String, String>>) = Unit
 
     suspend fun fetchFeeds(sources: List<Pair<String, String>>, onItemsFetched: (List<RssFeedItem>) -> Unit) = coroutineScope {
         val channel = Channel<List<RssFeedItem>>(capacity = Channel.UNLIMITED)
@@ -127,6 +112,7 @@ internal class FeedRepository(private val context: Context) {
             var title = ""
             var link = ""
             var pubDate = ""
+            var description = ""
 
             while (eventType != XmlPullParser.END_DOCUMENT) {
                 val localName = parser.name ?: ""
@@ -146,11 +132,21 @@ internal class FeedRepository(private val context: Context) {
                                         link = safeNextText(parser)
                                     }
                                 }
-                                localName.equals("pubDate", ignoreCase = true) || 
-                                localName.equals("published", ignoreCase = true) || 
+                                localName.equals("pubDate", ignoreCase = true) ||
+                                localName.equals("published", ignoreCase = true) ||
                                 localName.equals("updated", ignoreCase = true) ||
                                 localName.equals("date", ignoreCase = true) -> {
                                     pubDate = safeNextText(parser)
+                                }
+                                // Description sources, in preference order: RSS <description>,
+                                // Atom <summary>, Atom <content>, and <content:encoded>. The last
+                                // non-blank wins so richer fields override poorer ones within the item.
+                                localName.equals("description", ignoreCase = true) ||
+                                localName.equals("summary", ignoreCase = true) ||
+                                localName.equals("content", ignoreCase = true) ||
+                                localName.equals("encoded", ignoreCase = true) -> {
+                                    val text = safeNextText(parser).cleanDescription()
+                                    if (text.isNotBlank()) description = text
                                 }
                             }
                         }
@@ -164,7 +160,8 @@ internal class FeedRepository(private val context: Context) {
                                         source = source,
                                         timestamp = parseTimeAgo(pubDate),
                                         url = link.trim(),
-                                        publishedAtEpochMillis = parseEpochMillis(pubDate)
+                                        publishedAtEpochMillis = parseEpochMillis(pubDate),
+                                        description = description
                                     )
                                 )
                             }
@@ -172,6 +169,7 @@ internal class FeedRepository(private val context: Context) {
                             title = ""
                             link = ""
                             pubDate = ""
+                            description = ""
                             if (items.size >= 8) break
                         }
                     }
@@ -183,6 +181,23 @@ internal class FeedRepository(private val context: Context) {
     }
 
     private fun safeNextText(parser: XmlPullParser): String = runCatching { parser.nextText() }.getOrDefault("")
+
+    /** Strip HTML tags + common entities, collapse whitespace, cap at 300 chars. */
+    private fun String.cleanDescription(): String {
+        if (isBlank()) return ""
+        var s = replace(Regex("<[^>]+>"), " ")
+        s = s
+            .replace("&amp;", "&")
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+            .replace("&quot;", "\"")
+            .replace("&#39;", "'")
+            .replace("&apos;", "'")
+            .replace("&nbsp;", " ")
+            .replace(Regex("&#\\d+;"), " ")
+        s = s.replace(Regex("\\s+"), " ").trim()
+        return if (s.length > 300) s.take(297) + "..." else s
+    }
 
     private fun parseEpochMillis(dateStr: String): Long {
         if (dateStr.isBlank()) return 0L

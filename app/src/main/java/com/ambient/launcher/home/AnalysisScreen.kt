@@ -187,6 +187,22 @@ internal fun AnalysisScreen(
                     lineHeight = 18.sp
                 )
 
+                if (isLoading) {
+                    Spacer(Modifier.height(24.dp))
+                    Text(
+                        text = "STOP ANALYSIS",
+                        style = ResponsiveTypography.t3.copy(
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Normal,
+                            letterSpacing = 1.5.sp
+                        ),
+                        color = AmbientTheme.palette.accentHigh.copy(alpha = 0.8f),
+                        modifier = Modifier
+                            .clickable { viewModel.cancelAnalysis() }
+                            .padding(vertical = 8.dp)
+                    )
+                }
+
                 if (cachedEntry != null) {
                     Spacer(Modifier.height(24.dp))
                     Text(

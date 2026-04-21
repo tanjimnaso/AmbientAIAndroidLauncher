@@ -188,19 +188,16 @@ internal fun SPenNotesScreen(modifier: Modifier = Modifier) {
 
     val palette       = AmbientTheme.palette
     val mode          = AmbientTheme.mode
-    val isOutdoor     = mode == AmbientMode.DAYLIGHT_OUTDOOR
 
     val inkColor      = palette.inkColor
     val textPrimary   = palette.textPrimary
     val textSecondary = palette.textSecondary
     val accentHigh    = palette.accentHigh
 
-    // Dynamic contrast: Toolbar is "closer" to the user than the canvas.
-    // Outdoor mode stays "flat" (0% overlay effect) for maximum clarity.
-    val toolbarAlpha   = if (isOutdoor) 1f else 0.95f
-    val secondaryAlpha = if (isOutdoor) 1f else 0.82f
-    val disabledAlpha  = if (isOutdoor) 0.5f else 0.38f
-    val actionBgAlpha  = if (isOutdoor) 0f else 0.16f
+    val primaryAlpha   = palette.primaryOpacity
+    val secondaryAlpha = palette.secondaryOpacity
+    val actionBgAlpha  = palette.actionBackgroundOpacity
+    val disabledAlpha  = secondaryAlpha * 0.5f
 
     // Ambient reveal: toolbar hidden by default to let the canvas breathe.
     // A tap on the top strip surfaces it; auto-hides after 4 seconds.
@@ -409,7 +406,7 @@ internal fun SPenNotesScreen(modifier: Modifier = Modifier) {
                         imageVector        = Icons.AutoMirrored.Filled.Undo,
                         contentDescription = "Undo",
                         tint               = if (undoStack.isNotEmpty())
-                            textSecondary.copy(alpha = toolbarAlpha)
+                            textSecondary.copy(alpha = primaryAlpha)
                         else
                             textSecondary.copy(alpha = disabledAlpha),
                         modifier = Modifier
@@ -428,7 +425,7 @@ internal fun SPenNotesScreen(modifier: Modifier = Modifier) {
                         imageVector        = Icons.AutoMirrored.Filled.Redo,
                         contentDescription = "Redo",
                         tint               = if (redoStack.isNotEmpty())
-                            textSecondary.copy(alpha = toolbarAlpha)
+                            textSecondary.copy(alpha = primaryAlpha)
                         else
                             textSecondary.copy(alpha = disabledAlpha),
                         modifier = Modifier
@@ -472,7 +469,7 @@ internal fun SPenNotesScreen(modifier: Modifier = Modifier) {
                 Text(
                     text  = "+ New Note",
                     style = ResponsiveTypography.t3.copy(fontWeight = FontWeight.Normal, letterSpacing = 1.sp),
-                    color = accentHigh.copy(alpha = toolbarAlpha)
+                    color = accentHigh.copy(alpha = primaryAlpha)
                 )
             }
         }

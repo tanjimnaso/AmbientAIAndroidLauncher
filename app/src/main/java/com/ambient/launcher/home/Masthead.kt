@@ -38,7 +38,9 @@ internal fun Masthead(
     modifier: Modifier = Modifier,
     fullness: Float = 1f
 ) {
-    val secondaryAlpha = (fullness - 0.2f).coerceIn(0f, 1f)
+    val palette = AmbientTheme.palette
+    val secondaryAlpha = (fullness - 0.2f).coerceIn(0f, 1f) * palette.secondaryOpacity
+    val primaryAlpha = palette.primaryOpacity
     val today      = LocalDate.now()
     val dayName    = today.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH).uppercase()
     val monthName  = today.month.getDisplayName(TextStyle.FULL, Locale.ENGLISH).uppercase()
@@ -75,12 +77,12 @@ internal fun Masthead(
                         fontSize = 54.sp,
                         letterSpacing = (-1).sp
                     ),
-                    color = AmbientTheme.palette.textPrimary.copy(alpha = 0.85f)
+                    color = palette.textPrimary.copy(alpha = 0.85f * primaryAlpha)
                 )
                 Text(
                     text = amPm,
                     style = ResponsiveTypography.t3.copy(fontSize = 12.sp),
-                    color = AmbientTheme.palette.textSecondary.copy(alpha = 0.4f),
+                    color = palette.textSecondary.copy(alpha = 0.4f * primaryAlpha),
                     modifier = Modifier.padding(bottom = 12.dp, start = 4.dp)
                 )
             }
@@ -93,13 +95,13 @@ internal fun Masthead(
                         letterSpacing = 4.sp,
                         fontSize = 10.sp
                     ),
-                    color = AmbientTheme.palette.textSecondary.copy(alpha = 0.5f)
+                    color = palette.textSecondary.copy(alpha = 0.5f * primaryAlpha)
                 )
                 if (secondaryAlpha > 0.01f) {
                     Text(
                         text = dateString,
                         style = ResponsiveTypography.t3.copy(fontSize = 10.sp, letterSpacing = 1.sp),
-                        color = AmbientTheme.palette.textSecondary.copy(alpha = 0.3f),
+                        color = palette.textSecondary.copy(alpha = 0.3f * primaryAlpha),
                         modifier = Modifier.alpha(secondaryAlpha)
                     )
                 }
@@ -120,13 +122,13 @@ internal fun Masthead(
                     Text(
                         text = "${battery.percentage}",
                         style = ResponsiveTypography.t3.copy(fontSize = 9.sp),
-                        color = AmbientTheme.palette.textSecondary.copy(alpha = 0.4f)
+                        color = palette.textSecondary.copy(alpha = 0.4f * primaryAlpha)
                     )
                     if (battery.isCharging) {
                         Box(
                             modifier = Modifier
                                 .size(3.dp)
-                                .background(AmbientTheme.palette.accentHigh.copy(alpha = 0.6f), androidx.compose.foundation.shape.CircleShape)
+                                .background(palette.accentHigh.copy(alpha = 0.6f * primaryAlpha), androidx.compose.foundation.shape.CircleShape)
                         )
                     }
                 }
@@ -135,7 +137,7 @@ internal fun Masthead(
                 Text(
                     text = getCurrentSeason().uppercase(),
                     style = ResponsiveTypography.t3.copy(fontSize = 8.sp, letterSpacing = 2.sp),
-                    color = AmbientTheme.palette.textSecondary.copy(alpha = 0.3f)
+                    color = palette.textSecondary.copy(alpha = 0.3f * primaryAlpha)
                 )
             }
         }

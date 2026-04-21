@@ -7,11 +7,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ambient.launcher.ui.theme.AmbientTheme
+import com.ambient.launcher.ui.theme.seasonTint
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.time.temporal.WeekFields
@@ -81,13 +81,7 @@ private fun SeasonChip(
     season: String,
     modifier: Modifier = Modifier
 ) {
-    val color = when (season) {
-        "Spring" -> Color(0xFF4CAF50)
-        "Summer" -> Color(0xFFFFC107)
-        "Autumn" -> Color(0xFFFF9800)
-        "Winter" -> Color(0xFF2196F3)
-        else -> AmbientTheme.palette.accentHigh
-    }
+    val color = AmbientTheme.palette.seasonTint(season)
 
     Box(modifier = modifier.background(color.copy(alpha = 0.18f))) {
         Text(

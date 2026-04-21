@@ -25,7 +25,8 @@ data class RssFeedItem(
     val timestamp: String,
     val url: String,
     val publishedAtEpochMillis: Long,
-    val isStarred: Boolean = false
+    val isStarred: Boolean = false,
+    val description: String = ""
 )
 
 data class ForecastDay(
@@ -58,50 +59,33 @@ internal data class FeedSource(
 )
 
 internal val defaultFeedSources = listOf(
-    // ── Global wire services ──────────────────────────────────────────────────
-    FeedSource("BBC World", "http://feeds.bbci.co.uk/news/world/rss.xml"),
+    // ── Global news ──────────────────────────────────────────────────────────
     FeedSource("Al Jazeera", "https://www.aljazeera.com/xml/rss/all.xml"),
-    FeedSource("NYT World", "https://rss.nytimes.com/services/xml/rss/nyt/World.xml"),
+    FeedSource("Deutsche Welle", "https://rss.dw.com/xml/rss-en-all"),
     FeedSource("The Guardian", "https://www.theguardian.com/world/rss"),
     FeedSource("NPR World", "https://feeds.npr.org/1004/rss.xml"),
-    FeedSource("CBC World", "https://www.cbc.ca/cmlink/rss-world"),
-    FeedSource("Deutsche Welle", "https://rss.dw.com/rdf/rss-en-all"),
-    FeedSource("France 24", "https://www.france24.com/en/rss"),
-    // ── Asia-Pacific ─────────────────────────────────────────────────────────
-    FeedSource("Nikkei Asia", "https://asia.nikkei.com/rss/feed/nar"),
-    FeedSource("South China Morning Post", "https://www.scmp.com/rss/91/feed"),
-    FeedSource("Global Voices", "https://globalvoices.org/feed/"),
-    FeedSource("NHK World", "https://www3.nhk.or.jp/nhkworld/en/news/rss.xml"),
-    // ── Latin America & Africa ────────────────────────────────────────────────
+    FeedSource("ABC Australia", "https://www.abc.net.au/news/feed/45910/rss.xml"),
+
+    // ── Regional & Global voices ──────────────────────────────────────────────
     FeedSource("MercoPress", "https://en.mercopress.com/rss/latin-america"),
     FeedSource("AllAfrica", "https://allafrica.com/tools/headlines/rdf/latest/headlines.rdf"),
+    FeedSource("Global Voices", "https://globalvoices.org/feed/"),
+
     // ── Politics & analysis ───────────────────────────────────────────────────
-    FeedSource("The Economist", "https://www.economist.com/latest/rss.xml"),
     FeedSource("Foreign Policy", "https://foreignpolicy.com/feed/"),
     FeedSource("Project Syndicate", "https://www.project-syndicate.org/rss"),
-    // ── Tech & science ────────────────────────────────────────────────────────
-    FeedSource("Ars Technica", "https://feeds.arstechnica.com/arstechnica/index"),
-    FeedSource("Hacker News", "https://hnrss.org/frontpage"),
-    FeedSource("Quanta Magazine", "https://www.quantamagazine.org/feed/"),
     FeedSource("The Conversation", "https://theconversation.com/articles.atom"),
+
+    // ── Tech, science & environment ───────────────────────────────────────────
+    FeedSource("Hacker News", "https://hnrss.org/frontpage"),
+    FeedSource("Ars Technica", "https://feeds.arstechnica.com/arstechnica/index"),
     FeedSource("Rest of World", "https://restofworld.org/feed/"),
-    FeedSource("STAT News", "https://www.statnews.com/feed/"),
-    FeedSource("Daring Fireball", "https://daringfireball.net/feeds/main"),
-    // ── Environment & climate ─────────────────────────────────────────────────
-    FeedSource("Carbon Brief", "https://www.carbonbrief.org/feed/"),
-    FeedSource("Mongabay", "https://news.mongabay.com/feed/"),
+    FeedSource("Stat News", "https://www.statnews.com/feed/"),
     FeedSource("Yale E360", "https://e360.yale.edu/feed.xml"),
-    // ── Ideas & culture ───────────────────────────────────────────────────────
-    FeedSource("Aeon", "https://aeon.co/feed.rss"),
+
+    // ── Culture & Longform ────────────────────────────────────────────────────
     FeedSource("Longreads", "https://longreads.com/feed/"),
-    FeedSource("Smithsonian", "https://www.smithsonianmag.com/rss/articles/"),
     FeedSource("Public Domain Review", "https://publicdomainreview.org/feed/"),
-    FeedSource("Arts & Letters Daily", "https://www.aldaily.com/feed"),
-    FeedSource("Noema Magazine", "https://www.noemamag.com/feed/"),
-    FeedSource("3 Quarks Daily", "https://3quarksdaily.com/feed"),
-    FeedSource("Harper’s Magazine", "https://harpers.org/feed"),
-    FeedSource("The Marginalian", "https://feeds.feedburner.com/brainpickings/rss"),
-    FeedSource("Marginal Revolution", "https://feeds.feedblitz.com/marginalrevolution"),
 )
 
 internal class DashboardViewModel(
@@ -280,11 +264,14 @@ internal class DashboardViewModel(
         _isRefreshing.value = true
         viewModelScope.launch {
             try {
+                val activeSourceNames = currentSources.map { it.first }.toSet()
                 feedRepository.fetchFeeds(currentSources) { incoming ->
-                    val currentList = _feedItems.value
+                    // Drop items from sources that are no longer in the active list — otherwise
+                    // stale entries from removed feeds survive in memory across refreshes.
+                    val currentList = _feedItems.value.filter { it.source in activeSourceNames }
                     val combined = currentList + incoming
                     val processed = feedRepository.buildFreshFeed(combined)
-                    
+
                     if (processed.isNotEmpty()) {
                         val starred = _starredUrls.value
                         val deleted = _deletedUrls.value
@@ -379,6 +366,7 @@ internal class DashboardViewModel(
 
         val starred = _starredUrls.value
         val deleted = _deletedUrls.value
+        val activeSourceNames = currentSources.map { it.first }.toSet()
 
         val cachedItems = runCatching {
             val array = JSONArray(json)
@@ -386,15 +374,17 @@ internal class DashboardViewModel(
                 for (index in 0 until array.length()) {
                     val item = array.getJSONObject(index)
                     val url = item.getString("url")
-                    if (!deleted.contains(url)) {
+                    val source = item.getString("source")
+                    if (!deleted.contains(url) && activeSourceNames.contains(source)) {
                         add(
                             RssFeedItem(
                                 title = item.getString("title"),
-                                source = item.getString("source"),
+                                source = source,
                                 timestamp = item.getString("timestamp"),
                                 url = url,
                                 publishedAtEpochMillis = item.optLong("publishedAtEpochMillis", 0L),
-                                isStarred = starred.contains(url)
+                                isStarred = starred.contains(url),
+                                description = item.optString("description", "")
                             )
                         )
                     }
@@ -417,6 +407,7 @@ internal class DashboardViewModel(
                     put("timestamp", item.timestamp)
                     put("url", item.url)
                     put("publishedAtEpochMillis", item.publishedAtEpochMillis)
+                    put("description", item.description)
                 }
             )
         }

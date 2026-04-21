@@ -106,7 +106,7 @@ internal fun getAmbientIconFilterNonComposable(bucketColor: Color, opacity: Floa
         val r = bucketColor.red
         val g = bucketColor.green
         val b = bucketColor.blue
-        val a = opacity.coerceAtLeast(0.5f) // Stronger presence in dark modes
+        val a = opacity
         
         val m = floatArrayOf(
             r, 0f, 0f, 0f, 0f,

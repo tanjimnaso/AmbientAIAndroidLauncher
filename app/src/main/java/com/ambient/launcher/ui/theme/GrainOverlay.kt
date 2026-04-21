@@ -36,10 +36,9 @@ private data class GrainParams(
 private fun grainParamsFor(mode: AmbientMode, idleBlackout: Float): GrainParams = when (mode) {
     AmbientMode.DAYLIGHT_OUTDOOR -> GrainParams(0.07f, 128, BlendMode.OVERLAY)
     AmbientMode.DAY_INTERIOR_DIM -> GrainParams(0.04f, 192, BlendMode.SOFT_LIGHT)
-    AmbientMode.DUSK             -> GrainParams(0.04f, 192, BlendMode.SOFT_LIGHT)
+    AmbientMode.DUSK -> GrainParams(0.07f, 128, BlendMode.OVERLAY) // Transitional beige
     AmbientMode.TWILIGHT -> {
         // TWILIGHT fades background to black during idle blackout; grain follows
-        // (invisible on true black anyway, and stops any faint banding).
         val a = 0.03f * (1f - idleBlackout).coerceIn(0f, 1f)
         GrainParams(a, 256, BlendMode.SOFT_LIGHT)
     }

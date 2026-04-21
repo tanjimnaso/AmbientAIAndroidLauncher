@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ambient.launcher.HttpClient
 import com.ambient.launcher.RssFeedItem
 import com.ambient.launcher.tts.ArticleTtsPrep
 import com.ambient.launcher.tts.TtsChunk
@@ -43,6 +44,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.dankito.readability4j.Readability4J
+import okhttp3.Request
 import org.jsoup.Jsoup
 import kotlin.math.max
 
@@ -174,15 +176,46 @@ fun ArticleViewerScreen(
         error = null
         try {
             val result = withContext(Dispatchers.IO) {
-                val doc = Jsoup.connect(article.url)
-                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-                    .get()
+                // Use a more robust fetch with HttpClient and a modern mobile User-Agent
+                // to avoid being blocked by news sites (BBC, NYT, etc.)
+                val request = Request.Builder()
+                    .url(article.url)
+                    .header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
+                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+                    .header("Accept-Language", "en-US,en;q=0.5")
+                    .build()
 
-                val readability = Readability4J(article.url, doc.html())
-                val parsedArticle = readability.parse()
+                val html = HttpClient.instance.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        // If we get a 403 or 401, it's likely bot detection. 
+                        // We'll throw a more descriptive error.
+                        val msg = when(response.code) {
+                            403 -> "Access Denied (403). This site might be blocking automated readers."
+                            401 -> "Unauthorized (401). This article might be behind a paywall."
+                            404 -> "Article not found (404)."
+                            else -> "HTTP ${response.code}: ${response.message}"
+                        }
+                        throw Exception(msg)
+                    }
+                    response.body?.string() ?: throw Exception("Empty response body")
+                }
 
-                val articleContent = parsedArticle.content ?: "Unable to extract article content."
-                val articleTitle = parsedArticle.title ?: article.title
+                // Fallback: If Readability fails to extract content, we try to find a 
+                // main <article> or fallback to a simplified body.
+                val readability = Readability4J(article.url, html)
+                val parsedArticle = runCatching { readability.parse() }.getOrNull()
+
+                val articleTitle = parsedArticle?.title ?: article.title
+                var articleContent = parsedArticle?.content 
+                
+                if (articleContent == null || articleContent.length < 200) {
+                    // Fallback distillation if Readability4J fails
+                    val doc = Jsoup.parse(html, article.url)
+                    // Remove scripts, styles, etc.
+                    doc.select("script, style, iframe, footer, nav, header, aside").remove()
+                    val main = doc.select("article, .article-body, .content, main, #main-content").firstOrNull()
+                    articleContent = main?.html() ?: doc.body().html()
+                }
 
                 // Compose a single body fragment: title + metadata + content, then wrap
                 // every sentence inside block elements with seek-able spans.

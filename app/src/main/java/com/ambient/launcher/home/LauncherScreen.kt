@@ -10,6 +10,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,6 +40,13 @@ private val BLOCKED_QUICK_APP_PACKAGES = setOf(
     "com.android.chrome",
     "com.google.android.apps.chrome"
 )
+
+// Masthead-fade tuning
+private val RSS_SCROLL_FADE_DISTANCE = 100.dp   // full → transparent as the RSS list scrolls up
+private const val PAGE_EXIT_FRACTION  = 0.3f    // masthead is gone 30% into the news→notes swipe
+
+/** Smoothstep easing — 3t² − 2t³. Produces a soft S-curve on [0, 1]. */
+private fun smoothstep(t: Float): Float = t * t * (3f - 2f * t)
 
 /**
  * UI State for the Launcher screen to manage navigation and overlays.
@@ -108,6 +117,9 @@ internal fun LauncherScreen(
 
     // ── Side effects ──────────────────────────────────────────────────────────
     LaunchedEffect(ambientPalette.mainBackground) {
+        // Debounce wallpaper updates. During a palette transition (1s), we wait for 
+        // the color to settle before pushing the expensive bitmap update to the system.
+        delay(1100L)
         WallpaperHelper.setSolidColorWallpaper(context, ambientPalette.mainBackground)
     }
     LaunchedEffect(configuration.rssSources) {
@@ -115,8 +127,8 @@ internal fun LauncherScreen(
     }
     LaunchedEffect(feedItems) {
         if (feedItems.isNotEmpty()) {
-            // 30 headlines is sufficient signal for a one-liner briefing — no need to send all 66+
-            briefingViewModel.generateBriefing(feedItems.take(30).map { "${it.source}: ${it.title}" })
+            // Top 20 items — ViewModel splits 5 primary (with description) + 15 ambient (title only)
+            briefingViewModel.generateBriefing(feedItems.take(20))
         }
     }
 
@@ -177,15 +189,49 @@ internal fun LauncherScreen(
     var mastheadHeightPx by remember { mutableIntStateOf(0) }
     val mastheadHeightDp: Dp = with(density) { mastheadHeightPx.toDp() }
 
-    // S-curve fade: fully gone before the notes page is 30% into view.
-    // Compressing the range to [1.0, 1.3] means the masthead clears before
-    // "Right Handed" slides fully onto screen.
-    val mastheadAlpha by remember(pagerState) {
+    // ── Masthead alpha ─────────────────────────────────────────────────────
+    // The masthead fades for two independent reasons, multiplied together:
+    //   1. Vertical scroll on the news page — keeps the masthead from layering
+    //      on top of RSS headlines as the list moves up.
+    //   2. Horizontal swipe toward the notes page — notes has no masthead, so
+    //      we clear it before page 2 is fully on-screen.
+
+    val rssListState = rememberLazyListState()
+
+    // (1) News page: fully visible at the top of the list, fully hidden after
+    //     the user has scrolled RSS_SCROLL_FADE_DISTANCE or moved past the header.
+    val rssScrollAlpha by remember(rssListState, density) {
         derivedStateOf {
-            val pos = pagerState.currentPage + pagerState.currentPageOffsetFraction
-            val t = ((pos - 1f) / 0.3f).coerceIn(0f, 1f) // complete by 30% of swipe
-            val eased = t * t * (3f - 2f * t)              // smoothstep S-curve
-            1f - eased
+            val pastHeader = rssListState.firstVisibleItemIndex > 0
+            when {
+                pastHeader -> 0f
+                else -> {
+                    val fadePx = with(density) { RSS_SCROLL_FADE_DISTANCE.toPx() }
+                    val progress = (rssListState.firstVisibleItemScrollOffset / fadePx)
+                        .coerceIn(0f, 1f)
+                    1f - progress
+                }
+            }
+        }
+    }
+
+    // (2) Pager swipe toward notes: starts fading as page 1 → 2 begins, fully
+    //     clear by 30% of the swipe (so the masthead exits before "Right Handed"
+    //     slides into view). Uses smoothstep for eased S-curve motion.
+    val pagerSwipeAlpha by remember(pagerState) {
+        derivedStateOf {
+            val position = pagerState.currentPage + pagerState.currentPageOffsetFraction
+            val progress = ((position - 1f) / PAGE_EXIT_FRACTION).coerceIn(0f, 1f)
+            1f - smoothstep(progress)
+        }
+    }
+
+    // Combined: the scroll fade only applies while we're on or near the news page.
+    val mastheadAlpha by remember(pagerState, rssScrollAlpha, pagerSwipeAlpha) {
+        derivedStateOf {
+            val position = pagerState.currentPage + pagerState.currentPageOffsetFraction
+            val onNewsPage = position < 0.5f
+            if (onNewsPage) pagerSwipeAlpha * rssScrollAlpha else pagerSwipeAlpha
         }
     }
 
@@ -225,14 +271,14 @@ internal fun LauncherScreen(
 
     // Idle blackout: 10s after the chrome recedes on the main page, the palette
     // background drifts to true black over 3s. Any tap reverses it in 400ms.
-    // Skipped in DAYLIGHT_OUTDOOR — fading a white screen to black reads as a
-    // glitch, not as "settling into ambient mode."
+    // Skipped in light themes (DAYLIGHT_OUTDOOR, TWILIGHT) — fading a light screen
+    // to black reads as a glitch, and makes dark text illegible.
     val ambientMode = AmbientTheme.mode
-    val shouldBlackout by remember(mastheadRevealed, onMainPage, ambientMode) {
+    val shouldBlackout by remember(mastheadRevealed, onMainPage, ambientMode, ambientPalette.isDark) {
         derivedStateOf {
             onMainPage &&
                 !mastheadRevealed &&
-                ambientMode != AmbientMode.DAYLIGHT_OUTDOOR
+                ambientPalette.isDark
         }
     }
     var idleElapsed by remember { mutableStateOf(false) }
@@ -291,6 +337,7 @@ internal fun LauncherScreen(
                     feedItems            = feedItems,
                     isRefreshing         = isFeedRefreshing,
                     lastRefreshTime      = lastFeedRefreshTime,
+                    rssListState         = rssListState,
                     onRefresh            = {
                         dashboardViewModel.refreshFeeds()
                     },
@@ -308,7 +355,7 @@ internal fun LauncherScreen(
                     onBriefingClick      = {
                         if (briefingHasError) {
                             briefingViewModel.generateBriefing(
-                                headlines = feedItems.take(30).map { "${it.source}: ${it.title}" },
+                                items = feedItems.take(20),
                                 force = true
                             )
                         } else {
@@ -321,6 +368,13 @@ internal fun LauncherScreen(
                                     briefingViewModel.generateAnalysis(current)
                             }
                         }
+                    },
+                    onRefreshBriefing = {
+                        briefingViewModel.clearBriefingCache()
+                        briefingViewModel.generateBriefing(
+                            items = feedItems.take(20),
+                            force = true
+                        )
                     }
                 )
 
@@ -437,66 +491,68 @@ private fun LeftNewsPage(
     feedItems: List<RssFeedItem>,
     isRefreshing: Boolean,
     lastRefreshTime: Long,
+    rssListState: LazyListState,
     onRefresh: () -> Unit,
     onOpenCloudNotifications: () -> Unit,
     onFeedClick: (RssFeedItem) -> Unit,
     onToggleStar: (RssFeedItem) -> Unit,
     onDelete: (RssFeedItem) -> Unit,
-    onBriefingClick: () -> Unit
+    onBriefingClick: () -> Unit,
+    onRefreshBriefing: () -> Unit
 ) {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .navigationBarsPadding(),
-        verticalArrangement = Arrangement.spacedBy(0.dp)
+            .navigationBarsPadding()
     ) {
-        // Reserve space for the floating masthead rendered at the root level
-        Spacer(modifier = Modifier.height(topPadding))
-
-        TodaysSignal(
+        HeadlinesSection(
+            feedItems       = feedItems,
+            isRefreshing    = isRefreshing,
             lastRefreshTime = lastRefreshTime,
-            modifier        = Modifier.padding(horizontal = 28.dp, vertical = 8.dp)
-        )
+            onFeedClick     = onFeedClick,
+            onToggleStar    = onToggleStar,
+            onDelete        = onDelete,
+            onRefresh       = onRefresh,
+            listState       = rssListState,
+            modifier        = Modifier.fillMaxSize(),
+            headerContent   = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(0.dp)
+                ) {
+                    Spacer(modifier = Modifier.height(topPadding))
 
-        Text(
-            text  = "AROUND THE WORLD",
-            style = androidx.compose.ui.text.TextStyle(
-                fontFamily    = com.ambient.launcher.ui.theme.InterFontFamily,
-                fontSize      = 10.sp,
-                letterSpacing = 1.5.sp
-            ),
-            color    = AmbientTheme.palette.textSecondary.copy(alpha = 0.55f),
-            modifier = Modifier.padding(start = 28.dp, end = 28.dp, bottom = 4.dp)
-        )
+                    TodaysSignal(
+                        lastRefreshTime = lastRefreshTime,
+                        modifier        = Modifier.padding(horizontal = 28.dp, vertical = 8.dp)
+                    )
 
-        AiBriefingSection(
-            briefing              = briefing,
-            isBriefingLoading     = isBriefingLoading,
-            briefingHasError      = briefingHasError,
-            isAnalysisLoading     = isAnalysisLoading,
-            isAnalysisReady       = isAnalysisReady,
-            analysisHasError      = analysisHasError,
-            onClick               = onBriefingClick,
-            onOpenCloudNotifications = onOpenCloudNotifications,
-            modifier              = Modifier.fillMaxWidth()
-        )
+                    Text(
+                        text  = "AROUND THE WORLD",
+                        style = androidx.compose.ui.text.TextStyle(
+                            fontFamily    = com.ambient.launcher.ui.theme.InterFontFamily,
+                            fontSize      = 10.sp,
+                            letterSpacing = 1.5.sp
+                        ),
+                        color    = AmbientTheme.palette.textSecondary.copy(alpha = 0.55f),
+                        modifier = Modifier.padding(start = 28.dp, end = 28.dp, bottom = 4.dp)
+                    )
 
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-        ) {
-            HeadlinesSection(
-                feedItems       = feedItems,
-                isRefreshing    = isRefreshing,
-                lastRefreshTime = lastRefreshTime,
-                onFeedClick     = onFeedClick,
-                onToggleStar    = onToggleStar,
-                onDelete        = onDelete,
-                onRefresh       = onRefresh,
-                modifier        = Modifier.fillMaxSize()
-            )
-        }
+                    AiBriefingSection(
+                        briefing              = briefing,
+                        isBriefingLoading     = isBriefingLoading,
+                        briefingHasError      = briefingHasError,
+                        isAnalysisLoading     = isAnalysisLoading,
+                        isAnalysisReady       = isAnalysisReady,
+                        analysisHasError      = analysisHasError,
+                        onClick               = onBriefingClick,
+                        onOpenCloudNotifications = onOpenCloudNotifications,
+                        onRefreshBriefing     = onRefreshBriefing,
+                        modifier              = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        )
     }
 }
 
